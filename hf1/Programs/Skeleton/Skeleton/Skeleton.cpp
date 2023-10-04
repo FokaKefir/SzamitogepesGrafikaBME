@@ -1,5 +1,6 @@
 //=============================================================================================
-// 
+// Nev:		Babos David
+// Neptun:	Q1CGY7
 //=============================================================================================
 #include "framework.h"
 #include <stdexcept>
@@ -89,8 +90,9 @@ class ImmediateModeRenderer2D : public GPUProgram {
 	}
 
 public:
-	ImmediateModeRenderer2D() {
-		glViewport(0, 0, windowWidth, windowHeight);
+	ImmediateModeRenderer2D(int x, int y, int width, int height) {
+		//glViewport(0, 0, windowWidth, windowHeight);
+		glViewport(x, y, width, height);
 		glLineWidth(2.0f); glPointSize(10.0f);
 
 		create(vertexSource, fragmentSource, "outColor");
@@ -128,30 +130,25 @@ const int nTesselatedVertices = 50;
 class Hyperbolic {
 public:
 	static vec3 poincareToHyperbolic(vec2 poincarePoint) {
-		float d = sqrtf(1.0 - poincarePoint.x * poincarePoint.x - poincarePoint.y * poincarePoint.y);
+		float d = 1 - poincarePoint.x * poincarePoint.x - poincarePoint.y * poincarePoint.y;
 		vec3 hypPoint;
-		hypPoint.x = poincarePoint.x / d;
-		hypPoint.y = poincarePoint.y / d;
-		hypPoint.z = 1.0 / d;
+		hypPoint.x = 2 * poincarePoint.x / d;
+		hypPoint.y = 2 * poincarePoint.y / d;
+		hypPoint.z = 2 / d - 1;
 		return hypPoint;
 	}
 
 	static vec2 hyperbolicToPoinceare(vec3 hypPoint) {
 		vec2 poincarePoint;
-		poincarePoint.x = hypPoint.x / hypPoint.z;
-		poincarePoint.y = hypPoint.y / hypPoint.z;
+		poincarePoint.x = hypPoint.x / (hypPoint.z + 1);
+		poincarePoint.y = hypPoint.y / (hypPoint.z + 1);
 		return poincarePoint;
 	}
 
 	static std::vector<vec3> poincareToHyperbolic(std::vector<vec2> poincarePoints) {
 		std::vector<vec3> hypPoints;
 		for (vec2 poincarePoint : poincarePoints) {
-			float d = sqrtf(1.0 - poincarePoint.x * poincarePoint.x - poincarePoint.y * poincarePoint.y);
-			vec3 hypPoint;
-			hypPoint.x = poincarePoint.x / d;
-			hypPoint.y = poincarePoint.y / d;
-			hypPoint.z = 1.0 / d;
-			hypPoints.push_back(hypPoint);
+			hypPoints.push_back(poincareToHyperbolic(poincarePoint));
 		}
 		return hypPoints;
 	}
@@ -159,13 +156,43 @@ public:
 	static std::vector<vec2> hyperbolicToPoinceare(std::vector<vec3> hypPoints) {
 		std::vector<vec2> poincarePoints;
 		for (vec3 hypPoint : hypPoints) {
-			vec2 poincarePoint;
-			poincarePoint.x = hypPoint.x / hypPoint.z;
-			poincarePoint.y = hypPoint.y / hypPoint.z;
-			poincarePoints.push_back(poincarePoint);
+			poincarePoints.push_back(hyperbolicToPoinceare(hypPoint));
 		}
 		return poincarePoints;
 	}
+
+	static vec3 kleinToHyperbolic(vec2 kleinPoint) {
+		float d = sqrtf(1.0 - kleinPoint.x * kleinPoint.x - kleinPoint.y * kleinPoint.y);
+		vec3 hypPoint;
+		hypPoint.x = kleinPoint.x / d;
+		hypPoint.y = kleinPoint.y / d;
+		hypPoint.z = 1.0 / d;
+		return hypPoint;
+	}
+
+	static vec2 hyperbolicToKlein(vec3 hypPoint) {
+		vec2 kleinPoint;
+		kleinPoint.x = hypPoint.x / hypPoint.z;
+		kleinPoint.y = hypPoint.y / hypPoint.z;
+		return kleinPoint;
+	}
+
+	static std::vector<vec3> kleinToHyperbolic(std::vector<vec2> kleinPoints) {
+		std::vector<vec3> hypPoints;
+		for (vec2 kleinPoint : kleinPoints) {
+			hypPoints.push_back(kleinToHyperbolic(kleinPoint));
+		}
+		return hypPoints;
+	}
+
+	static std::vector<vec2> hyperbolicToKlein(std::vector<vec3> hypPoints) {
+		std::vector<vec2> kleinPoints;
+		for (vec3 hypPoint : hypPoints) {
+			kleinPoints.push_back(hyperbolicToKlein(hypPoint));
+		}
+		return kleinPoints;
+	}
+
 };
 
 
@@ -221,10 +248,11 @@ class Poincare {
 private:
 	ImmediateModeRenderer2D* renderer;
 	std::vector<vec2> circlePoints;
+	int x, y, width, height;
 
 public:
-	Poincare() {
-		renderer = new ImmediateModeRenderer2D(); // vertex and fragment shaders
+	Poincare(int _x, int _y, int _width, int _height) : x(_x), y(_y), width(_width), height(_height) {
+		renderer = new ImmediateModeRenderer2D(0, windowHeight / 2, windowWidth / 2, windowHeight / 2); // vertex and fragment shaders
 		for (int i = 0; i < nTesselatedVertices; i++) {
 			float phi = i * 2.0f * M_PI / nTesselatedVertices;
 			circlePoints.push_back(vec2(cosf(phi), sinf(phi)));
@@ -236,6 +264,7 @@ public:
 	}
 
 	void DrawInit() {
+		glViewport(x, y, width, height);
 		renderer->DrawGPU(GL_TRIANGLE_FAN, circlePoints, vec3(0.5f, 0.5f, 0.5f));
 	}
 
@@ -253,8 +282,88 @@ public:
 	}
 };
 
+class Klein {
+private:
+	ImmediateModeRenderer2D* renderer;
+	std::vector<vec2> circlePoints;
+	int x, y, width, height;
 
+public:
+	Klein(int _x, int _y, int _width, int _height) : x(_x), y(_y), width(_width), height(_height) {
+		renderer = new ImmediateModeRenderer2D(x, y, width, height); // vertex and fragment shaders
+		for (int i = 0; i < nTesselatedVertices; i++) {
+			float phi = i * 2.0f * M_PI / nTesselatedVertices;
+			circlePoints.push_back(vec2(cosf(phi), sinf(phi)));
+		}
+	}
 
+	~Klein() {
+		delete renderer;
+	}
+
+	void DrawInit() {
+		glViewport(x, y, width, height);
+		renderer->DrawGPU(GL_TRIANGLE_FAN, circlePoints, vec3(0.5f, 0.5f, 0.5f));
+	}
+
+	void DrawPoints(std::vector<vec3> hypUserPoints, vec3 color) {
+		renderer->DrawGPU(GL_POINTS, Hyperbolic::hyperbolicToKlein(hypUserPoints), color);
+	}
+
+	void DrawCircle(std::vector<HyperbolicCircle> circles) {
+		for (HyperbolicCircle circle : circles) {
+			std::vector<vec3> hypPolygon = circle.getPolygon();
+			std::vector<vec2> poincarePolygon = Hyperbolic::hyperbolicToKlein(hypPolygon);
+			renderer->DrawPolygon(poincarePolygon, vec3(1, 1, 1));
+			renderer->DrawGPU(GL_LINE_LOOP, poincarePolygon, vec3(1, 0.8f, 0.0f));
+		}
+	}
+};
+
+class SideView {
+	ImmediateModeRenderer2D* renderer;
+	int x, y, width, height;
+
+public:
+	SideView(int _x, int _y, int _width, int _height) : x(_x), y(_y), width(_width), height(_height){
+		renderer = new ImmediateModeRenderer2D(x, y, width, height); // vertex and fragment shaders
+		
+	}
+
+	~SideView() {
+		delete renderer;
+	}
+
+	void DrawInit() {
+		glViewport(x, y, width, height);
+	}
+
+	void DrawPoints(std::vector<vec3> hypUserPoints, vec3 color) {}
+
+	void DrawCircle(std::vector<HyperbolicCircle> circles) {}
+};
+
+class BottomView {
+	ImmediateModeRenderer2D* renderer;
+	int x, y, width, height;
+
+public:
+	BottomView(int _x, int _y, int _width, int _height) : x(_x), y(_y), width(_width), height(_height) {
+		renderer = new ImmediateModeRenderer2D(x, y, width, height); // vertex and fragment shaders
+	}
+
+	~BottomView() {
+		delete renderer;
+	}
+
+	void DrawInit() {
+		glViewport(x, y, width, height);
+	}
+
+	void DrawPoints(std::vector<vec3> hypUserPoints, vec3 color) {}
+
+	void DrawCircle(std::vector<HyperbolicCircle> circles) {}
+};
 
 /*
 class HyperbolicLine {
@@ -328,22 +437,37 @@ std::vector<HyperbolicCircle> circles;
 
 // Views
 Poincare* poincare;
+Klein* klein;
+SideView* side;
+BottomView* bottom;
+
 
 // Initialization, create an OpenGL context
 void onInitialization() {
-	poincare = new Poincare();
+	poincare = new Poincare(0, windowHeight / 2, windowWidth / 2, windowHeight / 2);
+	klein = new Klein(windowWidth / 2, windowHeight / 2, windowWidth / 2, windowHeight / 2);
+	side = new SideView(0, 0, windowWidth / 2, windowHeight / 2);
+	bottom = new BottomView(windowWidth / 2, 0, windowWidth / 2, windowHeight / 2);
 }
 
 // Window has become invalid: Redraw
 void onDisplay() {
-	glClearColor(0.8f, 0.8f, 0.8f, 0);				// background color 
+	glClearColor(0.8f, 0.8f, 0.8f, 0);					// background color 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the screen
 
 	poincare->DrawInit();
 	poincare->DrawCircle(circles);
 	poincare->DrawPoints(userPoints, vec3(0, 0, 1));
 	poincare->DrawPoints(placedPoints, vec3(1, 0, 0));
-	
+
+	klein->DrawInit();
+	klein->DrawCircle(circles);
+	klein->DrawPoints(userPoints, vec3(0, 0, 1));
+	klein->DrawPoints(placedPoints, vec3(1, 0, 0));
+
+	side->DrawInit();
+
+	bottom->DrawInit();
 	
 	glutSwapBuffers();									// exchange the two buffers
 }
@@ -356,13 +480,39 @@ float convertLinear(float a, float b, float c, float d, float x) {
 void onMouse(int button, int state, int pX, int pY) {
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {  // GLUT_LEFT_BUTTON / GLUT_RIGHT_BUTTON and GLUT_DOWN / GLUT_UP
 		printf("px: %d, py: %d\n", pX, pY);
-		float cX = 2.0f * pX / windowWidth - 1;	// flip y axis
+		float cX = 2.0f * pX / windowWidth - 1;
 		float cY = 1.0f - 2.0f * pY / windowHeight;
 
-		if (cX * cX + cY * cY >= 1) 
+		vec3 hypPoint;
+
+		//Kepernyo 4-be osztasa
+		if (cX < 0 && cY < 0) { // Oldalnezet
+			float x = convertLinear(-1, 0, -1, 1, cX);
+			float y = convertLinear(-1, 0, -1, 1, cY);
+			printf("Oldalnezet: %f %f\n", x, y);
 			return;
-		 
-		vec3 hypPoint = Hyperbolic::poincareToHyperbolic(vec2(cX, cY));
+		}
+		else if (cX > 0 && cY < 0) { // Alulnezet
+			float x = convertLinear(0, 1, -1, 1, cX);
+			float y = convertLinear(-1, 0, -1, 1, cY);
+			printf("Alulnezet: %f %f\n", x, y);
+			return;
+		}
+		else if (cX < 0 && cY > 0) { // Poincare
+			float x = convertLinear(-1, 0, -1, 1, cX);
+			float y = convertLinear(0, 1, -1, 1, cY);
+			if (x * x + y * y >= 1)
+				return;
+			hypPoint = Hyperbolic::poincareToHyperbolic(vec2(x, y));
+		}
+		else if (cX > 0 && cY > 0) { // Klein
+			float x = convertLinear(0, 1, -1, 1, cX);
+			float y = convertLinear(0, 1, -1, 1, cY);
+			if (x* x + y * y >= 1)
+				return;
+			hypPoint = Hyperbolic::kleinToHyperbolic(vec2(x, y));
+		}
+		
 		userPoints.push_back(hypPoint);
 		
 		glutPostRedisplay();     // redraw
@@ -407,30 +557,8 @@ void onMouse(int button, int state, int pX, int pY) {
 		glutPostRedisplay();
 	}
 
-	/* Kepernyo 4-be osztasa
-		float cX = 2.0f * pX / windowWidth - 1;	
-		float cY = 1.0f - 2.0f * pY / windowHeight;
-		if (cX < 0 && cY < 0) { // Oldalnezet
-			float x = convertLinear(-1, 0, -1, 1, cX);
-			float y = convertLinear(-1, 0, -1, 1, cY);
-			printf("Oldalnezet: %f %f\n", x, y);
-		}
-		else if (cX > 0 && cY < 0) { // Alulnezet
-			float x = convertLinear(0, 1, -1, 1, cX);
-			float y = convertLinear(-1, 0, -1, 1, cY);
-			printf("Alulnezet: %f %f\n", x, y);
-		}
-		else if (cX < 0 && cY > 0) { // Poincare
-			float x = convertLinear(-1, 0, -1, 1, cX);
-			float y = convertLinear(0, 1, -1, 1, cY);
-			printf("Poncare: %f %f\n", x, y);
-		}
-		else if (cX > 0 && cY > 0) { // Klein
-			float x = convertLinear(0, 1, -1, 1, cX);
-			float y = convertLinear(0, 1, -1, 1, cY);
-			printf("Klein: %f %f\n", x, y);
-		}
-	*/
+	
+	
 	
 }
 
