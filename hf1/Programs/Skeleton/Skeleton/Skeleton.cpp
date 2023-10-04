@@ -90,9 +90,7 @@ class ImmediateModeRenderer2D : public GPUProgram {
 	}
 
 public:
-	ImmediateModeRenderer2D(int x, int y, int width, int height) {
-		//glViewport(0, 0, windowWidth, windowHeight);
-		glViewport(x, y, width, height);
+	ImmediateModeRenderer2D() {
 		glLineWidth(2.0f); glPointSize(10.0f);
 
 		create(vertexSource, fragmentSource, "outColor");
@@ -129,6 +127,7 @@ const int nTesselatedVertices = 50;
 
 class Hyperbolic {
 public:
+	// Poincare
 	static vec3 poincareToHyperbolic(vec2 poincarePoint) {
 		float d = 1 - poincarePoint.x * poincarePoint.x - poincarePoint.y * poincarePoint.y;
 		vec3 hypPoint;
@@ -161,6 +160,7 @@ public:
 		return poincarePoints;
 	}
 
+	// Klein
 	static vec3 kleinToHyperbolic(vec2 kleinPoint) {
 		float d = sqrtf(1.0 - kleinPoint.x * kleinPoint.x - kleinPoint.y * kleinPoint.y);
 		vec3 hypPoint;
@@ -198,8 +198,8 @@ public:
 
 class HyperbolicCircle {
 private:
-	vec2 mid; // Poincare
-	float rad; // Poincare
+	vec2 mid; // Poincare coord
+	float rad; // Poincare 
 public:
 	HyperbolicCircle(vec3 hypp, vec3 hypq, vec3 hypr) {
 		vec2 p = Hyperbolic::hyperbolicToPoinceare(hypp),
@@ -229,7 +229,7 @@ public:
 			throw std::runtime_error("A kor nem illesztheto fel a hiperbolara!\n");
 	}
 
-	std::vector<vec3> getPolygon() {
+	std::vector<vec3> getPolygonPoints() {
 		std::vector<vec2> circlePoints; // Poincare
 		for (int i = 0; i < nTesselatedVertices; i++) {
 			float phi = i * 2.0f * M_PI / nTesselatedVertices;
@@ -243,6 +243,43 @@ public:
 	}
 };
 
+class HyperbolicLine {
+private:
+	vec2 p, q; // Klein coords
+public:
+	HyperbolicLine(vec3 hypPoint1, vec3 hypPoint2) {
+		vec2 point1 = Hyperbolic::hyperbolicToKlein(hypPoint1);
+		vec2 point2 = Hyperbolic::hyperbolicToKlein(hypPoint2);
+
+		float rad = 0.99;
+
+		float m = (point1.y - point2.y) / (point1.x - point2.x);
+		float x1 = point1.x;
+		float y1 = point1.y;
+
+		float a = (m * m + 1);
+		float b = (2 * m * y1 - 2 * x1 * m * m);
+		float c = (m * m * x1 * x1 - 2 * m * y1 * x1 + y1 * y1 - rad * rad);
+
+		float delta = b * b - 4 * a * c;
+		p.x = (-b - sqrtf(delta)) / (2 * a);
+		p.y = m * (p.x - x1) + y1;
+		q.x = (-b + sqrtf(delta)) / (2 * a);
+		q.y = m * (q.x - x1) + y1;
+	}
+
+	std::vector<vec3> getPolygonPoints() {
+		std::vector<vec2> linePoints; // Klein
+		float m = (q.y - p.y) / (q.x - p.x);
+		for (int i = 0; i <= nTesselatedVertices; i++) {
+			vec2 ppoint;
+			ppoint.x = p.x + i * (q.x - p.x) / nTesselatedVertices;
+			ppoint.y = m * (ppoint.x - p.x) + p.y;
+			linePoints.push_back(ppoint);
+		}
+		return Hyperbolic::kleinToHyperbolic(linePoints);
+	}
+};
 
 class Poincare {
 private:
@@ -252,7 +289,7 @@ private:
 
 public:
 	Poincare(int _x, int _y, int _width, int _height) : x(_x), y(_y), width(_width), height(_height) {
-		renderer = new ImmediateModeRenderer2D(0, windowHeight / 2, windowWidth / 2, windowHeight / 2); // vertex and fragment shaders
+		renderer = new ImmediateModeRenderer2D(); // vertex and fragment shaders
 		for (int i = 0; i < nTesselatedVertices; i++) {
 			float phi = i * 2.0f * M_PI / nTesselatedVertices;
 			circlePoints.push_back(vec2(cosf(phi), sinf(phi)));
@@ -272,12 +309,20 @@ public:
 		renderer->DrawGPU(GL_POINTS, Hyperbolic::hyperbolicToPoinceare(hypUserPoints), color);
 	}
 
-	void DrawCircle(std::vector<HyperbolicCircle> circles) {
+	void DrawCircles(std::vector<HyperbolicCircle> circles, vec3 circleColor, vec3 lineColor) {
 		for (HyperbolicCircle circle : circles) {
-			std::vector<vec3> hypPolygon = circle.getPolygon();
+			std::vector<vec3> hypPolygon = circle.getPolygonPoints();
 			std::vector<vec2> poincarePolygon = Hyperbolic::hyperbolicToPoinceare(hypPolygon);
-			renderer->DrawPolygon(poincarePolygon, vec3(1, 1, 1));
-			renderer->DrawGPU(GL_LINE_LOOP, poincarePolygon, vec3(1, 0.8f, 0.0f));
+			renderer->DrawPolygon(poincarePolygon, circleColor);
+			renderer->DrawGPU(GL_LINE_LOOP, poincarePolygon, lineColor);
+		}
+	}
+
+	void DrawLines(std::vector<HyperbolicLine> lines, vec3 lineColor) {
+		for (HyperbolicLine line: lines) {
+			std::vector<vec3> hypPolygon = line.getPolygonPoints();
+			std::vector<vec2> poincarePolygon = Hyperbolic::hyperbolicToPoinceare(hypPolygon);
+			renderer->DrawGPU(GL_LINE_STRIP, poincarePolygon, lineColor);
 		}
 	}
 };
@@ -290,7 +335,7 @@ private:
 
 public:
 	Klein(int _x, int _y, int _width, int _height) : x(_x), y(_y), width(_width), height(_height) {
-		renderer = new ImmediateModeRenderer2D(x, y, width, height); // vertex and fragment shaders
+		renderer = new ImmediateModeRenderer2D(); // vertex and fragment shaders
 		for (int i = 0; i < nTesselatedVertices; i++) {
 			float phi = i * 2.0f * M_PI / nTesselatedVertices;
 			circlePoints.push_back(vec2(cosf(phi), sinf(phi)));
@@ -310,12 +355,20 @@ public:
 		renderer->DrawGPU(GL_POINTS, Hyperbolic::hyperbolicToKlein(hypUserPoints), color);
 	}
 
-	void DrawCircle(std::vector<HyperbolicCircle> circles) {
+	void DrawCircles(std::vector<HyperbolicCircle> circles, vec3 circleColor, vec3 lineColor) {
 		for (HyperbolicCircle circle : circles) {
-			std::vector<vec3> hypPolygon = circle.getPolygon();
-			std::vector<vec2> poincarePolygon = Hyperbolic::hyperbolicToKlein(hypPolygon);
-			renderer->DrawPolygon(poincarePolygon, vec3(1, 1, 1));
-			renderer->DrawGPU(GL_LINE_LOOP, poincarePolygon, vec3(1, 0.8f, 0.0f));
+			std::vector<vec3> hypPolygon = circle.getPolygonPoints();
+			std::vector<vec2> kleinPolygon = Hyperbolic::hyperbolicToKlein(hypPolygon);
+			renderer->DrawPolygon(kleinPolygon, circleColor);
+			renderer->DrawGPU(GL_LINE_LOOP, kleinPolygon, lineColor);
+		}
+	}
+
+	void DrawLines(std::vector<HyperbolicLine> lines, vec3 lineColor) {
+		for (HyperbolicLine line : lines) {
+			std::vector<vec3> hypPolygon = line.getPolygonPoints();
+			std::vector<vec2> kleinePolygon = Hyperbolic::hyperbolicToKlein(hypPolygon);
+			renderer->DrawGPU(GL_LINE_STRIP, kleinePolygon, lineColor);
 		}
 	}
 };
@@ -326,7 +379,7 @@ class SideView {
 
 public:
 	SideView(int _x, int _y, int _width, int _height) : x(_x), y(_y), width(_width), height(_height){
-		renderer = new ImmediateModeRenderer2D(x, y, width, height); // vertex and fragment shaders
+		renderer = new ImmediateModeRenderer2D(); // vertex and fragment shaders
 		
 	}
 
@@ -349,7 +402,7 @@ class BottomView {
 
 public:
 	BottomView(int _x, int _y, int _width, int _height) : x(_x), y(_y), width(_width), height(_height) {
-		renderer = new ImmediateModeRenderer2D(x, y, width, height); // vertex and fragment shaders
+		renderer = new ImmediateModeRenderer2D(); // vertex and fragment shaders
 	}
 
 	~BottomView() {
@@ -434,6 +487,7 @@ public:
 std::vector<vec3> userPoints;
 std::vector<vec3> placedPoints;
 std::vector<HyperbolicCircle> circles;
+std::vector<HyperbolicLine> lines;
 
 // Views
 Poincare* poincare;
@@ -456,14 +510,16 @@ void onDisplay() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // clear the screen
 
 	poincare->DrawInit();
-	poincare->DrawCircle(circles);
+	poincare->DrawCircles(circles, vec3(0.439216, 0.858824, 0.858824), vec3(1, 1, 1));
 	poincare->DrawPoints(userPoints, vec3(0, 0, 1));
 	poincare->DrawPoints(placedPoints, vec3(1, 0, 0));
+	poincare->DrawLines(lines, vec3(1, 1, 1));
 
 	klein->DrawInit();
-	klein->DrawCircle(circles);
+	klein->DrawCircles(circles, vec3(0.439216, 0.858824, 0.858824), vec3(1, 1, 1));
 	klein->DrawPoints(userPoints, vec3(0, 0, 1));
 	klein->DrawPoints(placedPoints, vec3(1, 0, 0));
+	klein->DrawLines(lines, vec3(1, 1, 1));
 
 	side->DrawInit();
 
@@ -533,8 +589,9 @@ void onMouse(int button, int state, int pX, int pY) {
 			vec3 point1 = userPoints[0];
 			vec3 point2 = userPoints[1];
 			userPoints.clear();
-			// TODO: Create line
-
+			lines.push_back(HyperbolicLine(point1, point2));
+			placedPoints.push_back(point1);
+			placedPoints.push_back(point2);
 		}
 		else if (n >= 3) { // Place circle
 			vec3 point1 = userPoints[n - 1];
@@ -548,7 +605,6 @@ void onMouse(int button, int state, int pX, int pY) {
 				placedPoints.push_back(point1);
 				placedPoints.push_back(point2);
 				placedPoints.push_back(point3);
-				
 			}
 			catch (const std::runtime_error& e) {
 				printf("%s", e.what());
