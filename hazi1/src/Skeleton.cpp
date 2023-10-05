@@ -193,7 +193,6 @@ public:
     }
 
     // SideView
-
     static vec3 sideToHyperbolic(vec2 sidePoint) {
         return vec3(sidePoint.x, sqrtf((sidePoint.y + 2) * (sidePoint.y + 2) - sidePoint.x * sidePoint.x - 1), sidePoint.y + 2);
     }
@@ -245,8 +244,6 @@ public:
         }
         return bottomPoints;
     }
-
-
 };
 
 
@@ -438,20 +435,24 @@ class SideView {
     ImmediateModeRenderer2D* renderer;
     int x, y, width, height;
     std::vector<vec2> polygons;
+    std::vector<vec2> corners;
 public:
     SideView(int _x, int _y, int _width, int _height) : x(_x), y(_y), width(_width), height(_height){
         renderer = new ImmediateModeRenderer2D(); // vertex and fragment shaders
         std::vector<vec2> tmpPoints;
         for (int i = 0; i <= nTesselatedVertices; i++) {
-            float x = i * 2.0f / nTesselatedVertices - 1.0f;
-            tmpPoints.push_back(vec2(x, 0));
+            float xf = i * 2.0f / nTesselatedVertices - 1.0f;
+            tmpPoints.push_back(vec2(xf, 0));
         }
         polygons = Hyperbolic::hyperbolicToSide(
                 Hyperbolic::kleinToHyperbolic(tmpPoints)
         );
         polygons.insert(polygons.begin(), vec2(0, 1));
-        polygons.push_back(vec2(1, 1));
-        polygons.push_back(vec2(-1, 1));
+        corners.push_back(vec2(0, 0));
+        corners.push_back(vec2(-1, 0));
+        corners.push_back(vec2(-1, 1));
+        corners.push_back(vec2(1, 0));
+        corners.push_back(vec2(1, 1));
     }
 
     ~SideView() {
@@ -461,7 +462,7 @@ public:
     void DrawInit() {
         glViewport(x, y, width, height);
         renderer->DrawGPU(GL_TRIANGLE_FAN, polygons, vec3(0.5f, 0.5f, 0.5f));
-
+        renderer->DrawGPU(GL_TRIANGLE_STRIP, corners, vec3(0.5f, 0.5f, 0.5f));
     }
 
     void DrawPoints(std::vector<vec3> hypUserPoints, vec3 color) {
@@ -594,7 +595,7 @@ float convertLinear(float a, float b, float c, float d, float x) {
 
 // Mouse click event
 void onMouse(int button, int state, int pX, int pY) {
-    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {  // GLUT_LEFT_BUTTON / GLUT_RIGHT_BUTTON and GLUT_DOWN / GLUT_UP
+    if ((button == GLUT_LEFT_BUTTON || button == GLUT_RIGHT_BUTTON) && state == GLUT_DOWN) {  // GLUT_LEFT_BUTTON / GLUT_RIGHT_BUTTON and GLUT_DOWN / GLUT_UP
         printf("px: %d, py: %d\n", pX, pY);
         float cX = 2.0f * pX / windowWidth - 1;
         float cY = 1.0f - 2.0f * pY / windowHeight;
@@ -605,12 +606,16 @@ void onMouse(int button, int state, int pX, int pY) {
         if (cX < 0 && cY < 0) { // Oldalnezet
             float x = convertLinear(-1, 0, -1, 1, cX);
             float y = convertLinear(-1, 0, -1, 1, cY);
+            if ((y + 2) * (y + 2) - x * x - 1 < 0)
+                return;
             hypPoint = Hyperbolic::sideToHyperbolic(vec2(x, y));
+            printf("Oldalnezet: x=%f y=%f\n", x, y);
         }
         else if (cX > 0 && cY < 0) { // Alulnezet
             float x = convertLinear(0, 1, -1, 1, cX);
             float y = convertLinear(-1, 0, -1, 1, cY);
             hypPoint = Hyperbolic::bottomToHyperbolic(vec2(x, y));
+            printf("Alulnezet: x=%f y=%f\n", x, y);
         }
         else if (cX < 0 && cY > 0) { // Poincare
             float x = convertLinear(-1, 0, -1, 1, cX);
@@ -618,13 +623,15 @@ void onMouse(int button, int state, int pX, int pY) {
             if (x * x + y * y >= 1)
                 return;
             hypPoint = Hyperbolic::poincareToHyperbolic(vec2(x, y));
+            printf("Poincare: x=%f y=%f\n", x, y);
         }
         else if (cX > 0 && cY > 0) { // Klein
             float x = convertLinear(0, 1, -1, 1, cX);
             float y = convertLinear(0, 1, -1, 1, cY);
-            if (x* x + y * y >= 1)
+            if (x * x + y * y >= 1)
                 return;
             hypPoint = Hyperbolic::kleinToHyperbolic(vec2(x, y));
+            printf("Klein: x=%f y=%f\n", x, y);
         }
 
         userPoints.push_back(hypPoint);

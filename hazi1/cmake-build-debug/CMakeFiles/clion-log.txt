@@ -1,4 +1,0 @@
-C:\Users\david\AppData\Local\Programs\CLion\bin\cmake\win\bin\cmake.exe -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=C:/Users/david/AppData/Local/Programs/CLion/bin/ninja/win/ninja.exe -DCMAKE_CXX_COMPILER=C:/MinGW/bin/g++.exe -G Ninja -S C:\Users\david\OneDrive\Documents\SzGrafika\SzamitogepesGrafikaBME\hazi1 -B C:\Users\david\OneDrive\Documents\SzGrafika\SzamitogepesGrafikaBME\hazi1\cmake-build-debug
--- Configuring done
--- Generating done
--- Build files have been written to: C:/Users/david/OneDrive/Documents/SzGrafika/SzamitogepesGrafikaBME/hazi1/cmake-build-debug
