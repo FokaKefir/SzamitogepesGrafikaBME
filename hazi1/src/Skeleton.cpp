@@ -194,18 +194,40 @@ public:
 
     // SideView
 
-    // BottomView
+    static vec3 sideToHyperbolic(vec2 sidePoint) {
+        return vec3(sidePoint.x, sqrtf((sidePoint.y + 2) * (sidePoint.y + 2) - sidePoint.x * sidePoint.x - 1), sidePoint.y + 2);
+    }
 
+    static vec2 hyperbolicToSide(vec3 hypPoint) {
+        return vec2(hypPoint.x, hypPoint.z - 2);
+    }
+
+    static std::vector<vec3> sideToHyperbolic(std::vector<vec2> sidePoints) {
+        std::vector<vec3> hypPoints;
+        for (vec2 sidePoint : sidePoints) {
+            hypPoints.push_back(sideToHyperbolic(sidePoint));
+        }
+        return hypPoints;
+
+    }
+
+    static std::vector<vec2> hyperbolicToSide(std::vector<vec3> hypPoints) {
+        std::vector<vec2> sidePoints;
+        for (vec3 hypPoint : hypPoints) {
+            sidePoints.push_back(hyperbolicToSide(hypPoint));
+        }
+        return sidePoints;
+    }
+
+    // BottomView
 
     static vec3 bottomToHyperbolic(vec2 bottomPoint) {
         return vec3(bottomPoint.x, bottomPoint.y, sqrtf(1 + bottomPoint.x * bottomPoint.x + bottomPoint.y * bottomPoint.y));
     }
 
-
     static vec2 hyperbolicToBottom(vec3 hypPoint) {
         return vec2(hypPoint.x, hypPoint.y);
     }
-
 
     static std::vector<vec3> bottomToHyperbolic(std::vector<vec2> bottomPoints) {
         std::vector<vec3> hypPoints;
@@ -290,7 +312,7 @@ public:
         vec2 point1 = Hyperbolic::hyperbolicToKlein(hypPoint1);
         vec2 point2 = Hyperbolic::hyperbolicToKlein(hypPoint2);
 
-        float rad = 0.99;
+        float rad = 0.995;
 
         float m = (point1.y - point2.y) / (point1.x - point2.x);
         float x1 = point1.x;
@@ -415,11 +437,21 @@ public:
 class SideView {
     ImmediateModeRenderer2D* renderer;
     int x, y, width, height;
-
+    std::vector<vec2> polygons;
 public:
     SideView(int _x, int _y, int _width, int _height) : x(_x), y(_y), width(_width), height(_height){
         renderer = new ImmediateModeRenderer2D(); // vertex and fragment shaders
-
+        std::vector<vec2> tmpPoints;
+        for (int i = 0; i <= nTesselatedVertices; i++) {
+            float x = i * 2.0f / nTesselatedVertices - 1.0f;
+            tmpPoints.push_back(vec2(x, 0));
+        }
+        polygons = Hyperbolic::hyperbolicToSide(
+                Hyperbolic::kleinToHyperbolic(tmpPoints)
+        );
+        polygons.insert(polygons.begin(), vec2(0, 1));
+        polygons.push_back(vec2(1, 1));
+        polygons.push_back(vec2(-1, 1));
     }
 
     ~SideView() {
@@ -428,20 +460,46 @@ public:
 
     void DrawInit() {
         glViewport(x, y, width, height);
+        renderer->DrawGPU(GL_TRIANGLE_FAN, polygons, vec3(0.5f, 0.5f, 0.5f));
+
     }
 
-    void DrawPoints(std::vector<vec3> hypUserPoints, vec3 color) {}
+    void DrawPoints(std::vector<vec3> hypUserPoints, vec3 color) {
+        renderer->DrawGPU(GL_POINTS, Hyperbolic::hyperbolicToSide(hypUserPoints), color);
+    }
 
-    void DrawCircle(std::vector<HyperbolicCircle> circles) {}
+    void DrawCircles(std::vector<HyperbolicCircle> circles, vec3 circleColor, vec3 lineColor) {
+        for (HyperbolicCircle circle : circles) {
+            std::vector<vec3> hypPolygon = circle.getPolygonPoints();
+            std::vector<vec2> sidePolygon = Hyperbolic::hyperbolicToSide(hypPolygon);
+            renderer->DrawPolygon(sidePolygon, circleColor);
+            renderer->DrawGPU(GL_LINE_LOOP, sidePolygon, lineColor);
+        }
+    }
+
+    void DrawLines(std::vector<HyperbolicLine> lines, vec3 lineColor) {
+        for (HyperbolicLine line : lines) {
+            std::vector<vec3> hypPolygon = line.getPolygonPoints();
+            std::vector<vec2> sidePolygon = Hyperbolic::hyperbolicToSide(hypPolygon);
+            renderer->DrawGPU(GL_LINE_STRIP, sidePolygon, lineColor);
+        }
+    }
 };
 
 class BottomView {
     ImmediateModeRenderer2D* renderer;
     int x, y, width, height;
+    std::vector<vec2> corners;
 
 public:
     BottomView(int _x, int _y, int _width, int _height) : x(_x), y(_y), width(_width), height(_height) {
         renderer = new ImmediateModeRenderer2D(); // vertex and fragment shaders
+
+        corners.push_back(vec2(0, 0));
+        corners.push_back(vec2(-1, -1));
+        corners.push_back(vec2(-1, 1));
+        corners.push_back(vec2(1, -1));
+        corners.push_back(vec2(1, 1));
     }
 
     ~BottomView() {
@@ -450,6 +508,7 @@ public:
 
     void DrawInit() {
         glViewport(x, y, width, height);
+        renderer->DrawGPU(GL_TRIANGLE_STRIP, corners, vec3(0.5f, 0.5f, 0.5f));
     }
 
     void DrawPoints(std::vector<vec3> hypUserPoints, vec3 color) {
@@ -515,6 +574,10 @@ void onDisplay() {
     klein->DrawLines(lines, vec3(1, 1, 1));
 
     side->DrawInit();
+    side->DrawCircles(circles, vec3(0.439216, 0.858824, 0.858824), vec3(1, 1, 1));
+    side->DrawPoints(userPoints, vec3(0, 0, 1));
+    side->DrawPoints(placedPoints, vec3(1, 0, 0));
+    side->DrawLines(lines, vec3(1, 1, 1));
 
     bottom->DrawInit();
     bottom->DrawCircles(circles, vec3(0.439216, 0.858824, 0.858824), vec3(1, 1, 1));
@@ -542,8 +605,7 @@ void onMouse(int button, int state, int pX, int pY) {
         if (cX < 0 && cY < 0) { // Oldalnezet
             float x = convertLinear(-1, 0, -1, 1, cX);
             float y = convertLinear(-1, 0, -1, 1, cY);
-            printf("Oldalnezet: %f %f\n", x, y);
-            return;
+            hypPoint = Hyperbolic::sideToHyperbolic(vec2(x, y));
         }
         else if (cX > 0 && cY < 0) { // Alulnezet
             float x = convertLinear(0, 1, -1, 1, cX);
