@@ -3,7 +3,6 @@
 // Neptun:	Q1CGY7
 //=============================================================================================
 #include "framework.h"
-#include <stdexcept>
 
 class ImmediateModeRenderer2D : public GPUProgram {
 	const char* const vertexSource = R"(
@@ -193,6 +192,39 @@ public:
 		return kleinPoints;
 	}
 
+	// SideView
+
+	// BottomView
+
+	
+	static vec3 bottomToHyperbolic(vec2 bottomPoint) {
+		return vec3(bottomPoint.x, bottomPoint.y, sqrtf(1 + bottomPoint.x * bottomPoint.x + bottomPoint.y * bottomPoint.y));
+	}
+	
+	
+	static vec2 hyperbolicToBottom(vec3 hypPoint) {
+		return vec2(hypPoint.x, hypPoint.y);
+	}
+
+	
+	static std::vector<vec3> bottomToHyperbolic(std::vector<vec2> bottomPoints) {
+		std::vector<vec3> hypPoints;
+		for (vec2 bottomPoint : bottomPoints) {
+			hypPoints.push_back(bottomToHyperbolic(bottomPoint));
+		}
+		return hypPoints;
+
+	}
+
+	static std::vector<vec2> hyperbolicToBottom(std::vector<vec3> hypPoints) {
+		std::vector<vec2> bottomPoints;
+		for (vec3 hypPoint : hypPoints) {
+			bottomPoints.push_back(hyperbolicToBottom(hypPoint));
+		}
+		return bottomPoints;
+	}
+
+
 };
 
 
@@ -200,6 +232,7 @@ class HyperbolicCircle {
 private:
 	vec2 mid; // Poincare coord
 	float rad; // Poincare 
+	bool ok;
 public:
 	HyperbolicCircle(vec3 hypp, vec3 hypq, vec3 hypr) {
 		vec2 p = Hyperbolic::hyperbolicToPoinceare(hypp),
@@ -226,7 +259,9 @@ public:
 		rad = length(mid - p);
 
 		if (length(mid) >= 1 - rad)
-			throw std::runtime_error("A kor nem illesztheto fel a hiperbolara!\n");
+			ok = false;
+		else
+			ok = true;
 	}
 
 	std::vector<vec3> getPolygonPoints() {
@@ -240,6 +275,10 @@ public:
 			);
 		}
 		return Hyperbolic::poincareToHyperbolic(circlePoints);
+	}
+
+	bool isOk() {
+		return ok;
 	}
 };
 
@@ -413,75 +452,29 @@ public:
 		glViewport(x, y, width, height);
 	}
 
-	void DrawPoints(std::vector<vec3> hypUserPoints, vec3 color) {}
-
-	void DrawCircle(std::vector<HyperbolicCircle> circles) {}
-};
-
-/*
-class HyperbolicLine {
-	vec2 center;
-	float radius, phi_p, phi_q;
-public:
-	HyperbolicLine(vec2 p, vec2 q) {
-		float p2 = dot(p, p), q2 = dot(q, q), pq = dot(p, q);
-		float a = (p2 + 1) / 2.0f, b = (q2 + 1) / 2.0f;
-		float denom = (p2 * q2 - pq * pq);
-		if (fabs(denom) > 1e-7) center = (p * (q2 * a - pq * b) + q * (p2 * b - pq * a)) / denom;
-
-		vec2 center2p = p - center, center2q = q - center;
-		radius = length(center2p);
-		phi_p = atan2f(center2p.y, center2p.x);
-		phi_q = atan2f(center2q.y, center2q.x);
-		if (phi_p - phi_q >= M_PI) phi_p -= 2 * M_PI;
-		else if (phi_q - phi_p >= M_PI) phi_q -= 2 * M_PI;
+	void DrawPoints(std::vector<vec3> hypUserPoints, vec3 color) {
+		renderer->DrawGPU(GL_POINTS, Hyperbolic::hyperbolicToBottom(hypUserPoints), color);
 	}
 
-	std::vector<vec2> getTessellation() {
-		std::vector<vec2> points(nTesselatedVertices);
-		for (int i = 0; i < nTesselatedVertices; i++) {
-			float phi = phi_p + (phi_q - phi_p) * (float)i / (nTesselatedVertices - 1.0f);
-			points[i] = center + vec2(cosf(phi), sinf(phi)) * radius;
+	void DrawCircles(std::vector<HyperbolicCircle> circles, vec3 circleColor, vec3 lineColor) {
+		for (HyperbolicCircle circle : circles) {
+			std::vector<vec3> hypPolygon = circle.getPolygonPoints();
+			std::vector<vec2> bottomPolygon = Hyperbolic::hyperbolicToBottom(hypPolygon);
+			renderer->DrawPolygon(bottomPolygon, circleColor);
+			renderer->DrawGPU(GL_LINE_LOOP, bottomPolygon, lineColor);
 		}
-		return points;
 	}
 
-	vec2 startDir(vec2 p) { return phi_q > phi_p ? normalize(center - p) : -normalize(center - p); }
-
-	float getLength() {
-		float l = -1;
-		vec2 pprev;
-		for (auto p : getTessellation()) {
-			if (l < 0) l = 0;
-			else       l += length(p - pprev) / (1 - dot((p + pprev) / 2, (p + pprev) / 2));
-			pprev = p;
+	void DrawLines(std::vector<HyperbolicLine> lines, vec3 lineColor) {
+		for (HyperbolicLine line : lines) {
+			std::vector<vec3> hypPolygon = line.getPolygonPoints();
+			std::vector<vec2> bottomPolygon = Hyperbolic::hyperbolicToBottom(hypPolygon);
+			renderer->DrawGPU(GL_LINE_STRIP, bottomPolygon, lineColor);
 		}
-		return l;
 	}
 };
 
-class HyperbolicTriangle {
-	vec2 p, q, r;
-	HyperbolicLine line1, line2, line3;
-public:
-	HyperbolicTriangle(vec2 _p, vec2 _q, vec2 _r) : line1(_p, _q), line2(_q, _r), line3(_r, _p) {
-		p = _p; q = _q; r = _r;
-		float alpha = acos(dot(line1.startDir(p), -line3.startDir(p))) * 180 / M_PI;
-		float beta = acos(dot(line1.startDir(q), -line2.startDir(q))) * 180 / M_PI;
-		float gamma = acos(dot(line2.startDir(r), -line3.startDir(r))) * 180 / M_PI;
-		printf("Alpha: %f, Beta: %f, Gamma: %f, Angle sum: %f\n", alpha, beta, gamma, alpha + beta + gamma);
-		printf("a: %f, b: %f, c: %f\n", line2.getLength(), line3.getLength(), line1.getLength());
-	}
 
-	void Draw(ImmediateModeRenderer2D* renderer) {
-		std::vector<vec2> polygon = line1.getTessellation(), l2 = line2.getTessellation(), l3 = line3.getTessellation();
-		polygon.insert(polygon.end(), l2.begin(), l2.end());
-		polygon.insert(polygon.end(), l3.begin(), l3.end());
-		renderer->DrawPolygon(polygon, vec3(0.0f, 0.8f, 0.8f));
-		renderer->DrawGPU(GL_LINE_LOOP, polygon, vec3(1, 0.8f, 0.0f));
-	}
-};
-*/
 
 // The virtual world
 std::vector<vec3> userPoints;
@@ -524,6 +517,10 @@ void onDisplay() {
 	side->DrawInit();
 
 	bottom->DrawInit();
+	bottom->DrawCircles(circles, vec3(0.439216, 0.858824, 0.858824), vec3(1, 1, 1));
+	bottom->DrawPoints(userPoints, vec3(0, 0, 1));
+	bottom->DrawPoints(placedPoints, vec3(1, 0, 0));
+	bottom->DrawLines(lines, vec3(1, 1, 1));
 	
 	glutSwapBuffers();									// exchange the two buffers
 }
@@ -551,8 +548,7 @@ void onMouse(int button, int state, int pX, int pY) {
 		else if (cX > 0 && cY < 0) { // Alulnezet
 			float x = convertLinear(0, 1, -1, 1, cX);
 			float y = convertLinear(-1, 0, -1, 1, cY);
-			printf("Alulnezet: %f %f\n", x, y);
-			return;
+			hypPoint = Hyperbolic::bottomToHyperbolic(vec2(x, y));
 		}
 		else if (cX < 0 && cY > 0) { // Poincare
 			float x = convertLinear(-1, 0, -1, 1, cX);
@@ -600,21 +596,20 @@ void onMouse(int button, int state, int pX, int pY) {
 			userPoints.pop_back();
 			userPoints.pop_back();
 			userPoints.pop_back();
-			try {
-				circles.push_back(HyperbolicCircle(point1, point2, point3));
-				placedPoints.push_back(point1);
-				placedPoints.push_back(point2);
-				placedPoints.push_back(point3);
+			
+			HyperbolicCircle circle = HyperbolicCircle(point1, point2, point3);
+			if (circle.isOk() == false) {
+				glutPostRedisplay();
+				return;
 			}
-			catch (const std::runtime_error& e) {
-				printf("%s", e.what());
-			}
+
+			circles.push_back(circle);
+			placedPoints.push_back(point1);
+			placedPoints.push_back(point2);
+			placedPoints.push_back(point3);
 		}
 		glutPostRedisplay();
 	}
-
-	
-	
 	
 }
 
