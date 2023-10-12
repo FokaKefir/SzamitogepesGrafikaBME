@@ -1,0 +1,3 @@
+C:/Users/david/OneDrive/Documents/SzGrafika/SzamitogepesGrafikaBME/qiuz2/cmake-build-debug/CMakeFiles/qiuz2.dir
+C:/Users/david/OneDrive/Documents/SzGrafika/SzamitogepesGrafikaBME/qiuz2/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/david/OneDrive/Documents/SzGrafika/SzamitogepesGrafikaBME/qiuz2/cmake-build-debug/CMakeFiles/rebuild_cache.dir
