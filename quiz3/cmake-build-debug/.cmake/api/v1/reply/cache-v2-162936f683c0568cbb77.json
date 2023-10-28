@@ -55,7 +55,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "c:/Users/david/OneDrive/Documents/SzGrafika/SzamitogepesGrafikaBME/quiz3/cmake-build-debug"
+			"value" : "c:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/quiz3/cmake-build-debug"
 		},
 		{
 			"name" : "CMAKE_CACHE_MAJOR_VERSION",
@@ -575,7 +575,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/david/OneDrive/Documents/SzGrafika/SzamitogepesGrafikaBME/quiz3/cmake-build-debug/CMakeFiles/pkgRedirects"
+			"value" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/quiz3/cmake-build-debug/CMakeFiles/pkgRedirects"
 		},
 		{
 			"name" : "CMAKE_GENERATOR",
@@ -647,7 +647,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "C:/Users/david/OneDrive/Documents/SzGrafika/SzamitogepesGrafikaBME/quiz3"
+			"value" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/quiz3"
 		},
 		{
 			"name" : "CMAKE_INSTALL_PREFIX",
@@ -1275,7 +1275,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/david/OneDrive/Documents/SzGrafika/SzamitogepesGrafikaBME/quiz3/cmake-build-debug"
+			"value" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/quiz3/cmake-build-debug"
 		},
 		{
 			"name" : "quiz2_IS_TOP_LEVEL",
@@ -1299,7 +1299,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/david/OneDrive/Documents/SzGrafika/SzamitogepesGrafikaBME/quiz3"
+			"value" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/quiz3"
 		}
 	],
 	"kind" : "cache",
