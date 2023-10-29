@@ -24,10 +24,6 @@ file(MAKE_DIRECTORY ${SRC_FOLDER})
 file(MAKE_DIRECTORY ${INCLUDE_FOLDER})
 file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/cmake)
 
-file(DOWNLOAD http://cg.iit.bme.hu/~szirmay/grafika/framework.cpp ${SRC_FOLDER}/framework.cpp)
-file(DOWNLOAD http://cg.iit.bme.hu/~szirmay/grafika/framework.h ${SRC_FOLDER}/framework.h)
-file(DOWNLOAD http://cg.iit.bme.hu/~szirmay/grafika/Skeleton.cpp ${SRC_FOLDER}/Skeleton.cpp)
-
 set_source_files_properties(${SRC_FOLDER}/Skeleton.cpp ${SRC_FOLDER}/framework.cpp
         ${SRC_FOLDER}/framework.h PROPERTIES GENERATED TRUE)
 

@@ -3,8 +3,13 @@
 //=============================================================================================
 #include "framework.h"
 #include <random>
+#include <cmath>
 
-#define NUM_STARS 50
+#define NUM_STARS 150
+#define SPLIT_INTEGRAL 300
+
+#define MIN_DISTANCE 700e5
+#define MAX_DISTANCE 3000e5
 
 struct Material {
     vec3 ka, kd, ks;
@@ -63,8 +68,85 @@ struct Sphere : public Intersectable {
     }
 };
 
+struct DataPoint {
+    float time;
+    float value;
+};
+
+class HermiteInterpolation {
+private:
+    std::vector<DataPoint> data;
+    float minTime, maxTime;
+    float minVal, maxVal;
+
+public:
+    HermiteInterpolation(std::vector<DataPoint> data, float maxVal, float minVal) {
+        this->data = data;
+        this->minVal = minVal;
+        this->maxVal = maxVal;
+        this->minTime = data.front().time;
+        this->maxTime = data.back().time;
+    }
+
+    float interpolate(float time) {
+        if (time <= minTime)
+            return data.front().value;
+        else if (time >= maxTime)
+            return data.back().value;
+
+        float result = 0.0;
+        for (int i = 0; i < data.size(); i++) {
+            float term = data[i].value;
+            for (int j = 0; j < data.size(); j++) {
+                if (i != j) {
+                    term *= (time - data[j].time) / (data[i].time - data[j].time);
+                }
+            }
+            result += term;
+        }
+
+        if (result > maxVal)
+            result = maxVal;
+        else if (result < minVal)
+            result = minVal;
+
+        return result;
+    }
+
+    float getMinTime() const {
+        return this->minTime;
+    }
+
+    float getMaxTime() const {
+        return this->maxTime;
+    }
+
+};
+
 class Camera {
+private:
     vec3 eye, lookat, right, up;
+    vec4 rgbComponent;
+
+    float calcComponent(HermiteInterpolation sInterpol, HermiteInterpolation rgbInterpol) {
+        float sum = 0;
+
+        float minTime = sInterpol.getMinTime();
+        float maxTime = sInterpol.getMaxTime();
+
+        float step = (maxTime - minTime) / SPLIT_INTEGRAL;
+
+        for (int i = 0; i < SPLIT_INTEGRAL; ++i) {
+            float t1 = minTime + (float) i * step;
+
+            float val1 = sInterpol.interpolate(t1);
+            float val2 = rgbInterpol.interpolate(t1);
+
+            sum += (val1 * val2);
+        }
+
+        return sum / SPLIT_INTEGRAL;
+    }
 public:
     void set(vec3 _eye, vec3 _lookat, vec3 vup, float fov) {
         eye = _eye;
@@ -73,14 +155,39 @@ public:
         float focus = length(w);
         right = normalize(cross(vup, w)) * focus * tanf(fov / 2);
         up = normalize(cross(w, right)) * focus * tanf(fov / 2);
+
+        std::vector<DataPoint> spectrumData = {{150.0, 0.0},{450.0, 1.0},{1600.0, 0.1}};
+        HermiteInterpolation spectrumInterpolation(spectrumData, 1.0, 0.0);
+
+        std::vector<DataPoint> redDetectorData = {{400.0, 0.0},{500.0, -0.2},{600.0, 2.5},{700.0, 0.0}};
+        HermiteInterpolation redDetectorInterpolation(redDetectorData, 2.5, -0.2);
+
+        std::vector<DataPoint> greenDetectorData = {{400.0, 0.0},{450.0, -0.1},{550.0, 1.2},{700.0, 0.0}};
+        HermiteInterpolation greenDetectorInterpolation(greenDetectorData, 1.2, -0.1);
+
+        std::vector<DataPoint> blueDetectorData = {{400.0, 0.0},{460.0, 1.0},{520.0, 0.0}};
+        HermiteInterpolation blueDetectorInterpolation(blueDetectorData, 1.0, 0.0);
+
+        float redComponent = calcComponent(spectrumInterpolation, redDetectorInterpolation);
+        float greenComponent = calcComponent(spectrumInterpolation, greenDetectorInterpolation);
+        float blueComponent = calcComponent(spectrumInterpolation, blueDetectorInterpolation);
+
+        rgbComponent.x = redComponent;
+        rgbComponent.y = greenComponent;
+        rgbComponent.z = blueComponent;
+
+        rgbComponent = rgbComponent / redComponent;
     }
+
     Ray getRay(int X, int Y) {
         vec3 dir = lookat + right * (2.0f * (X + 0.5f) / windowWidth - 1) + up * (2.0f * (Y + 0.5f) / windowHeight - 1) - eye;
         return Ray(eye, dir);
     }
-};
 
-const float epsilon = 0.0001f;
+    vec4 getRGBComponent() const {
+        return rgbComponent;
+    }
+};
 
 class Scene {
     std::vector<Intersectable *> objects;
@@ -100,7 +207,7 @@ public:
 
         std::random_device rd; // obtain a random number from hardware
         std::mt19937 gen(rd()); // seed the generator
-        std::uniform_int_distribution<> distrX(600e5, 3000e5); // define the range
+        std::uniform_int_distribution<> distrX(MIN_DISTANCE, MAX_DISTANCE); // define the range
         std::uniform_int_distribution<> distrY(-40e5, 40e5); // define the range
         std::uniform_int_distribution<> distrZ(-40e5, 40e5); // define the range
         for (int i = 0; i < NUM_STARS; i++) {
@@ -113,22 +220,39 @@ public:
                     5e5,
                     material
             );
-            //printf("%f %f %f\n", sphere->center.x, sphere->center.y, sphere->center.z);
             objects.push_back(sphere);
 
         }
     }
 
     void render(std::vector<vec4>& image) {
+        std::vector<float> distances(windowWidth * windowHeight);
+        float minDistance = MAX_DISTANCE + 1;
         for (int Y = 0; Y < windowHeight; Y++) {
 #pragma omp parallel for
             for (int X = 0; X < windowWidth; X++) {
-                vec3 color = trace(camera.getRay(X, Y));
-                image[Y * windowWidth + X] = vec4(color.x, color.y, color.z, 1);
+                float d = trace(camera.getRay(X, Y));
+                distances[Y * windowWidth + X] = d;
+                if (d != -1 && d < minDistance) {
+                    minDistance = d;
+                }
             }
         }
 
-        // TODO: normalize pixel colors
+        for (int Y = 0; Y < windowHeight; Y++) {
+            for (int X = 0; X < windowWidth; X++) {
+                vec4 color;
+                if (minDistance != (MAX_DISTANCE + 1) && distances[Y * windowWidth + X] != -1) {
+                    color = camera.getRGBComponent() * 5
+                            * (minDistance / distances[Y * windowWidth + X]) *
+                            (minDistance / distances[Y * windowWidth + X]);
+                    color.w = 1;
+                } else {
+                    color = vec4(0, 0, 0, 1);
+                }
+                image[Y * windowWidth + X] = color;
+            }
+        }
     }
 
     Hit firstIntersect(Ray ray) {
@@ -142,11 +266,10 @@ public:
         return bestHit;
     }
 
-    vec3 trace(Ray ray) {
+    float trace(Ray ray) {
         Hit hit = firstIntersect(ray);
-        if (hit.t < 0) return La;
-        vec3 outRadiance = hit.material->ka * La;
-        return outRadiance;
+        if (hit.t < 0) return -1;
+        return hit.distance;
     }
 };
 
