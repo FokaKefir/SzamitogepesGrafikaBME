@@ -601,7 +601,7 @@ FGAPI void    FGAPIENTRY glutReportErrors( void );
 
 /* Comment from glut.h of classic GLUT:
 
-   Win32 has an annoying issue where there are multiple C run-time
+   Win32 has an annoying issue where there are multiple C run-tx
    libraries (CRTs).  If the executable is linked with a different CRT
    from the GLUT DLL, the GLUT DLL will not share the same CRT static
    data seen by the executable.  In particular, atexit callbacks registered

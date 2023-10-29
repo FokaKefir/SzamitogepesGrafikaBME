@@ -213,7 +213,7 @@ typedef _W64 int ptrdiff_t;
  * Needed for ptrdiff_t in turn needed by VBO.  This is defined by ISO
  * C.  On my system, this amounts to _3 lines_ of included code, all of
  * them pretty much harmless.  If you know of a way of detecting 32 vs
- * 64 _targets_ at compile time you are free to replace this with
+ * 64 _targets_ at compile tx you are free to replace this with
  * something that's portable.  For now, _this_ is the portable solution.
  * (mem, 2004-01-04)
  */

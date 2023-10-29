@@ -92,7 +92,7 @@
 
 /*
  * New tokens for glutInitDisplayMode.
- * Only one GLUT_AUXn bit may be used at a time.
+ * Only one GLUT_AUXn bit may be used at a tx.
  * Value 0x0400 is defined in OpenGLUT.
  */
 #define  GLUT_AUX                           0x1000

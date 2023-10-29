@@ -23,7 +23,7 @@ void onMouseMotion(int pX, int pY);
 // Mouse click event
 void onMouse(int button, int state, int pX, int pY);
 
-// Idle event indicating that some time elapsed: do animation here
+// Idle event indicating that some tx elapsed: do animation here
 void onIdle();
 
 // Entry point of the application

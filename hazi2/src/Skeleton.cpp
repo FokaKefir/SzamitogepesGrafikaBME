@@ -1,15 +1,28 @@
 //=============================================================================================
-// Computer Graphics Sample Program: Ray-tracing-let
+// Neptun:  Q1CGY7
+// Nev:     Babos David
 //=============================================================================================
+
 #include "framework.h"
 #include <random>
 #include <cmath>
+#include <unistd.h>
+#include <ctime>
 
-#define NUM_STARS 150
+
+#define NUM_STARS 300
 #define SPLIT_INTEGRAL 300
 
-#define MIN_DISTANCE 700e5
-#define MAX_DISTANCE 3000e5
+#define MIN_DISTANCE 1000e5
+#define MAX_DISTANCE 6000e5
+
+#define MIN_YZ -70e5
+#define MAX_YZ 70e5
+
+#define INIT_TIME 1
+
+int tx = INIT_TIME;
+float hubble = 0.1;
 
 struct Material {
     vec3 ka, kd, ks;
@@ -49,6 +62,7 @@ struct Sphere : public Intersectable {
 
     Hit intersect(const Ray& ray) {
         Hit hit;
+        vec3 center = this->center + (float)(tx - INIT_TIME) * hubble * this->center;
         vec3 dist = ray.start - center;
         float a = dot(ray.dir, ray.dir);
         float b = dot(dist, ray.dir) * 2.0f;
@@ -189,10 +203,14 @@ public:
     }
 };
 
+float rnd(int min, int max) {
+    return (float) (rand() % (max + 1 - min) + min);
+}
+
 class Scene {
     std::vector<Intersectable *> objects;
     Camera camera;
-    vec3 La;
+    float globalMinDistance = -1.0;
 public:
     void build() {
         float fov = 4 * M_PI / 180;
@@ -200,28 +218,30 @@ public:
             lookat = vec3(1 / tan(fov / 2), 0, 0);
         camera.set(eye, lookat, vup, fov);
 
-        La = vec3(0.4f, 0.4f, 0.4f);
-
         vec3 kd(0.3f, 0.2f, 0.1f), ks(2, 2, 2);
         Material * material = new Material(kd, ks, 100);
 
-        std::random_device rd; // obtain a random number from hardware
-        std::mt19937 gen(rd()); // seed the generator
-        std::uniform_int_distribution<> distrX(MIN_DISTANCE, MAX_DISTANCE); // define the range
-        std::uniform_int_distribution<> distrY(-40e5, 40e5); // define the range
-        std::uniform_int_distribution<> distrZ(-40e5, 40e5); // define the range
+        //std::random_device rd; // obtain a random number from hardware
+        //std::mt19937 gen(rd()); // seed the generator
+        //std::uniform_int_distribution<> distrX(MIN_DISTANCE, MAX_DISTANCE); // define the range
+        //std::uniform_int_distribution<> distrY(-40e5, 40e5); // define the range
+        //std::uniform_int_distribution<> distrZ(-40e5, 40e5); // define the range
         for (int i = 0; i < NUM_STARS; i++) {
+            float x = rnd(MIN_DISTANCE, MAX_DISTANCE);
+            float y = rnd(MIN_YZ, MAX_YZ);
+            float z = rnd(MIN_YZ, MAX_YZ);
+            //float x = distrX(gen);
+            //float y = distrY(gen);
+            //float z = distrZ(gen);
+
             Sphere* sphere = new Sphere(
                     vec3(
-                            distrX(gen),
-                            distrY(gen),
-                            distrZ(gen)
+                            x, y, z
                          ),
                     5e5,
                     material
             );
             objects.push_back(sphere);
-
         }
     }
 
@@ -239,13 +259,17 @@ public:
             }
         }
 
+        if (globalMinDistance == -1)
+            globalMinDistance = minDistance;
+
+
         for (int Y = 0; Y < windowHeight; Y++) {
             for (int X = 0; X < windowWidth; X++) {
                 vec4 color;
-                if (minDistance != (MAX_DISTANCE + 1) && distances[Y * windowWidth + X] != -1) {
+                if (globalMinDistance != (MAX_DISTANCE + 1) && distances[Y * windowWidth + X] != -1) {
                     color = camera.getRGBComponent() * 5
-                            * (minDistance / distances[Y * windowWidth + X]) *
-                            (minDistance / distances[Y * windowWidth + X]);
+                            * (globalMinDistance / distances[Y * windowWidth + X]) *
+                            (globalMinDistance / distances[Y * windowWidth + X]);
                     color.w = 1;
                 } else {
                     color = vec4(0, 0, 0, 1);
@@ -333,13 +357,15 @@ public:
 };
 
 FullScreenTexturedQuad * fullScreenTexturedQuad;
+std::vector<vec4> image(windowWidth * windowHeight);
 
 // Initialization, create an OpenGL context
 void onInitialization() {
+    srand(time(NULL));
+
     glViewport(0, 0, windowWidth, windowHeight);
     scene.build();
 
-    std::vector<vec4> image(windowWidth * windowHeight);
     long timeStart = glutGet(GLUT_ELAPSED_TIME);
     scene.render(image);
     long timeEnd = glutGet(GLUT_ELAPSED_TIME);
@@ -354,13 +380,25 @@ void onInitialization() {
 
 // Window has become invalid: Redraw
 void onDisplay() {
+    long timeStart = glutGet(GLUT_ELAPSED_TIME);
+    scene.render(image);
+    long timeEnd = glutGet(GLUT_ELAPSED_TIME);
+    printf("Rendering time: %ld milliseconds\n", (timeEnd - timeStart));
+
+    fullScreenTexturedQuad = new FullScreenTexturedQuad(windowWidth, windowHeight, image);
+
     fullScreenTexturedQuad->Draw();
     glutSwapBuffers();									// exchange the two buffers
 }
 
 // Key of ASCII code pressed
 void onKeyboard(unsigned char key, int pX, int pY) {
-    // TODO: input 0-9
+    if ('0' <= key and key <= '9') {
+        int k = key - '0';
+        tx = 2 * k;
+        printf("Time: %d\n", tx);
+        glutPostRedisplay();
+    }
 }
 
 // Key of ASCII code released
@@ -376,6 +414,6 @@ void onMouse(int button, int state, int pX, int pY) {
 void onMouseMotion(int pX, int pY) {
 }
 
-// Idle event indicating that some time elapsed: do animation here
+// Idle event indicating that some tx elapsed: do animation here
 void onIdle() {
 }
