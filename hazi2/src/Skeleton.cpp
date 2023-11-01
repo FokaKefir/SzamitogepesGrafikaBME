@@ -4,12 +4,12 @@
 //=============================================================================================
 
 #include "framework.h"
-#include <random>
-#include <unistd.h>
+//#include <random>
+//#include <unistd.h>
 #include <ctime>
 
 
-#define NUM_STARS 300
+#define NUM_STARS 100
 #define SPLIT_INTEGRAL 300
 
 #define MIN_DISTANCE 1000e5
@@ -207,20 +207,18 @@ public:
             lookat = vec3(1 / tan(fov / 2), 0, 0);
         camera.set(eye, lookat, vup, fov);
 
-        vec3 kd(0.3f, 0.2f, 0.1f), ks(2, 2, 2);
-
-        std::random_device rd; // obtain a random number from hardware
-        std::mt19937 gen(rd()); // seed the generator
-        std::uniform_int_distribution<> distrX(MIN_DISTANCE, MAX_DISTANCE); // define the range
-        std::uniform_int_distribution<> distrY(-40e5, 40e5); // define the range
-        std::uniform_int_distribution<> distrZ(-40e5, 40e5); // define the range
+        //std::random_device rd; // obtain a random number from hardware
+        //std::mt19937 gen(rd()); // seed the generator
+        //std::uniform_int_distribution<> distrX(MIN_DISTANCE, MAX_DISTANCE); // define the range
+        //std::uniform_int_distribution<> distrY(MIN_YZ, MAX_YZ); // define the range
+        //std::uniform_int_distribution<> distrZ(MIN_YZ, MAX_YZ); // define the range
         for (int i = 0; i < NUM_STARS; i++) {
-            //float x = rnd(MIN_DISTANCE, MAX_DISTANCE);
-            //float y = rnd(MIN_YZ, MAX_YZ);
-            //float z = rnd(MIN_YZ, MAX_YZ);
-            float x = distrX(gen);
-            float y = distrY(gen);
-            float z = distrZ(gen);
+            float x = rnd(MIN_DISTANCE, MAX_DISTANCE);
+            float y = rnd(MIN_YZ, MAX_YZ);
+            float z = rnd(MIN_YZ, MAX_YZ);
+            //float x = distrX(gen);
+            //float y = distrY(gen);
+            //float z = distrZ(gen);
 
             Sphere* sphere = new Sphere(vec3(x, y, z),5e5);
             objects.push_back(sphere);
@@ -347,6 +345,8 @@ void onInitialization() {
 
     glViewport(0, 0, windowWidth, windowHeight);
     scene.build();
+    scene.render(image);
+
 
     // create program for the GPU
     gpuProgram.create(vertexSource, fragmentSource, "fragmentColor");
@@ -354,10 +354,10 @@ void onInitialization() {
 
 // Window has become invalid: Redraw
 void onDisplay() {
-    long timeStart = glutGet(GLUT_ELAPSED_TIME);
+    //long timeStart = glutGet(GLUT_ELAPSED_TIME);
     scene.render(image);
-    long timeEnd = glutGet(GLUT_ELAPSED_TIME);
-    printf("Rendering time: %ld milliseconds\n", (timeEnd - timeStart));
+    //long timeEnd = glutGet(GLUT_ELAPSED_TIME);
+    //printf("Rendering time: %ld milliseconds\n", (timeEnd - timeStart));
 
     fullScreenTexturedQuad = new FullScreenTexturedQuad(windowWidth, windowHeight, image);
 
