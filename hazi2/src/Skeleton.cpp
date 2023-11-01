@@ -5,7 +5,6 @@
 
 #include "framework.h"
 #include <random>
-#include <cmath>
 #include <unistd.h>
 #include <ctime>
 
@@ -24,17 +23,11 @@
 int tx = INIT_TIME;
 float hubble = 0.1;
 
-struct Material {
-    vec3 ka, kd, ks;
-    float shininess;
-    Material(vec3 _kd, vec3 _ks, float _shininess) : ka(_kd * M_PI), kd(_kd), ks(_ks) { shininess = _shininess; }
-};
 
 struct Hit {
     float t;
     float distance;
     vec3 position, normal;
-    Material * material;
     Hit() { t = -1; }
 };
 
@@ -44,8 +37,6 @@ struct Ray {
 };
 
 class Intersectable {
-protected:
-    Material * material;
 public:
     virtual Hit intersect(const Ray& ray) = 0;
 };
@@ -54,10 +45,9 @@ struct Sphere : public Intersectable {
     vec3 center;
     float radius;
 
-    Sphere(const vec3& _center, float _radius, Material* _material) {
+    Sphere(const vec3& _center, float _radius) {
         center = _center;
         radius = _radius;
-        material = _material;
     }
 
     Hit intersect(const Ray& ray) {
@@ -77,7 +67,6 @@ struct Sphere : public Intersectable {
         hit.position = ray.start + ray.dir * hit.t;
         hit.distance = length(ray.dir * hit.t);
         hit.normal = (hit.position - center) * (1.0f / radius);
-        hit.material = material;
         return hit;
     }
 };
@@ -219,28 +208,21 @@ public:
         camera.set(eye, lookat, vup, fov);
 
         vec3 kd(0.3f, 0.2f, 0.1f), ks(2, 2, 2);
-        Material * material = new Material(kd, ks, 100);
 
-        //std::random_device rd; // obtain a random number from hardware
-        //std::mt19937 gen(rd()); // seed the generator
-        //std::uniform_int_distribution<> distrX(MIN_DISTANCE, MAX_DISTANCE); // define the range
-        //std::uniform_int_distribution<> distrY(-40e5, 40e5); // define the range
-        //std::uniform_int_distribution<> distrZ(-40e5, 40e5); // define the range
+        std::random_device rd; // obtain a random number from hardware
+        std::mt19937 gen(rd()); // seed the generator
+        std::uniform_int_distribution<> distrX(MIN_DISTANCE, MAX_DISTANCE); // define the range
+        std::uniform_int_distribution<> distrY(-40e5, 40e5); // define the range
+        std::uniform_int_distribution<> distrZ(-40e5, 40e5); // define the range
         for (int i = 0; i < NUM_STARS; i++) {
-            float x = rnd(MIN_DISTANCE, MAX_DISTANCE);
-            float y = rnd(MIN_YZ, MAX_YZ);
-            float z = rnd(MIN_YZ, MAX_YZ);
-            //float x = distrX(gen);
-            //float y = distrY(gen);
-            //float z = distrZ(gen);
+            //float x = rnd(MIN_DISTANCE, MAX_DISTANCE);
+            //float y = rnd(MIN_YZ, MAX_YZ);
+            //float z = rnd(MIN_YZ, MAX_YZ);
+            float x = distrX(gen);
+            float y = distrY(gen);
+            float z = distrZ(gen);
 
-            Sphere* sphere = new Sphere(
-                    vec3(
-                            x, y, z
-                         ),
-                    5e5,
-                    material
-            );
+            Sphere* sphere = new Sphere(vec3(x, y, z),5e5);
             objects.push_back(sphere);
         }
     }
@@ -366,14 +348,6 @@ void onInitialization() {
     glViewport(0, 0, windowWidth, windowHeight);
     scene.build();
 
-    long timeStart = glutGet(GLUT_ELAPSED_TIME);
-    scene.render(image);
-    long timeEnd = glutGet(GLUT_ELAPSED_TIME);
-    printf("Rendering time: %d milliseconds\n", (timeEnd - timeStart));
-
-    // copy image to GPU as a texture
-    fullScreenTexturedQuad = new FullScreenTexturedQuad(windowWidth, windowHeight, image);
-
     // create program for the GPU
     gpuProgram.create(vertexSource, fragmentSource, "fragmentColor");
 }
@@ -396,7 +370,7 @@ void onKeyboard(unsigned char key, int pX, int pY) {
     if ('0' <= key and key <= '9') {
         int k = key - '0';
         tx = 2 * k;
-        printf("Time: %d\n", tx);
+        printf("%d milliard ev\n", tx);
         glutPostRedisplay();
     }
 }
