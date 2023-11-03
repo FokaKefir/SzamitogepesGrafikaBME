@@ -8,8 +8,8 @@
 #include <unistd.h>
 #include <ctime>
 
-#define NUM_STARS 10
-#define SPLIT_INTEGRAL 50
+#define NUM_STARS 100
+#define SPLIT_INTEGRAL 100
 
 #define MIN_DISTANCE 1000e5
 #define MAX_DISTANCE 6000e5
@@ -18,6 +18,8 @@
 #define MAX_YZ 70e5
 
 #define INIT_TIME 1
+
+#define C 1079252827.2f // km/h
 
 int tx = INIT_TIME;
 float hubble = 0.1;
@@ -131,8 +133,14 @@ class Camera {
 private:
     vec3 eye, lookat, right, up;
 
-    float calcComponent(HermiteInterpolation sInterpol, HermiteInterpolation rgbInterpol) const {
-        float sum = 0;
+
+    float calcComponentDoppler(HermiteInterpolation sInterpol, HermiteInterpolation rgbInterpol, float v) const {
+
+        v /= 8766000000000.0f; // km / h
+        float lambdaConst = (1 + v / C);
+
+        float sum = 0.0f;
+        float sumLambda = 0.0f;
 
         float minTime = sInterpol.getMinTime();
         float maxTime = sInterpol.getMaxTime();
@@ -140,16 +148,19 @@ private:
         float step = (maxTime - minTime) / SPLIT_INTEGRAL;
 
         for (int i = 0; i < SPLIT_INTEGRAL; ++i) {
-            float t1 = minTime + (float) i * step;
+            float l1 = (minTime + (float) i * step) * lambdaConst;
+            float l2 = (minTime + (float) (i + 1) * step) * lambdaConst;
 
-            float val1 = sInterpol.interpolate(t1);
-            float val2 = rgbInterpol.interpolate(t1);
+            float val1 = sInterpol.interpolate(l1) * rgbInterpol.interpolate(l1);
+            float val2 = sInterpol.interpolate(l2) * rgbInterpol.interpolate(l2);
 
-            sum += (val1 * val2);
+            sum += (val1 + val2) / 2.0f * (l2 - l1);
+            sumLambda += (l2 - l1);
         }
 
-        return sum / SPLIT_INTEGRAL;
+        return sum / sumLambda;
     }
+
 public:
     void set(vec3 _eye, vec3 _lookat, vec3 vup, float fov) {
         eye = _eye;
@@ -178,12 +189,11 @@ public:
         std::vector<DataPoint> blueDetectorData = {{400.0, 0.0},{460.0, 1.0},{520.0, 0.0}};
         HermiteInterpolation blueDetectorInterpolation(blueDetectorData, 1.0, 0.0);
 
-        float redComponent = calcComponent(spectrumInterpolation, redDetectorInterpolation);
-        float greenComponent = calcComponent(spectrumInterpolation, greenDetectorInterpolation);
-        float blueComponent = calcComponent(spectrumInterpolation, blueDetectorInterpolation);
+        float redComponent = calcComponentDoppler(spectrumInterpolation, redDetectorInterpolation, v);
+        float greenComponent = calcComponentDoppler(spectrumInterpolation, greenDetectorInterpolation, v);
+        float blueComponent = calcComponentDoppler(spectrumInterpolation, blueDetectorInterpolation, v);
 
         vec4 rgbComponent(redComponent, greenComponent, blueComponent, 1);
-        //rgbComponent = rgbComponent / max(rgbComponent.x, max(rgbComponent.y, rgbComponent.z));
         return rgbComponent;
     }
 };
