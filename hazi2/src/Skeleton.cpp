@@ -4,13 +4,12 @@
 //=============================================================================================
 
 #include "framework.h"
-//#include <random>
-//#include <unistd.h>
+#include <random>
+#include <unistd.h>
 #include <ctime>
 
-
-#define NUM_STARS 100
-#define SPLIT_INTEGRAL 300
+#define NUM_STARS 10
+#define SPLIT_INTEGRAL 50
 
 #define MIN_DISTANCE 1000e5
 #define MAX_DISTANCE 6000e5
@@ -26,7 +25,8 @@ float hubble = 0.1;
 
 struct Hit {
     float t;
-    float distance;
+    float d;
+    float v;
     vec3 position, normal;
     Hit() { t = -1; }
 };
@@ -52,7 +52,7 @@ struct Sphere : public Intersectable {
 
     Hit intersect(const Ray& ray) {
         Hit hit;
-        vec3 center = this->center + (float)(tx - INIT_TIME) * hubble * this->center;
+        vec3 center = this->center * exp(hubble * (float)(tx - INIT_TIME)); // add Hubble's law
         vec3 dist = ray.start - center;
         float a = dot(ray.dir, ray.dir);
         float b = dot(dist, ray.dir) * 2.0f;
@@ -65,7 +65,8 @@ struct Sphere : public Intersectable {
         if (t1 <= 0) return hit;
         hit.t = (t2 > 0) ? t2 : t1;
         hit.position = ray.start + ray.dir * hit.t;
-        hit.distance = length(ray.dir * hit.t);
+        hit.d = length(ray.dir * hit.t);
+        hit.v = hit.d * hubble; // add velocity
         hit.normal = (hit.position - center) * (1.0f / radius);
         return hit;
     }
@@ -129,9 +130,8 @@ public:
 class Camera {
 private:
     vec3 eye, lookat, right, up;
-    vec4 rgbComponent;
 
-    float calcComponent(HermiteInterpolation sInterpol, HermiteInterpolation rgbInterpol) {
+    float calcComponent(HermiteInterpolation sInterpol, HermiteInterpolation rgbInterpol) const {
         float sum = 0;
 
         float minTime = sInterpol.getMinTime();
@@ -158,7 +158,14 @@ public:
         float focus = length(w);
         right = normalize(cross(vup, w)) * focus * tanf(fov / 2);
         up = normalize(cross(w, right)) * focus * tanf(fov / 2);
+    }
 
+    Ray getRay(int X, int Y) {
+        vec3 dir = lookat + right * (2.0f * (X + 0.5f) / windowWidth - 1) + up * (2.0f * (Y + 0.5f) / windowHeight - 1) - eye;
+        return Ray(eye, dir);
+    }
+
+    vec4 getRGB(float v) const {
         std::vector<DataPoint> spectrumData = {{150.0, 0.0},{450.0, 1.0},{1600.0, 0.1}};
         HermiteInterpolation spectrumInterpolation(spectrumData, 1.0, 0.0);
 
@@ -175,19 +182,8 @@ public:
         float greenComponent = calcComponent(spectrumInterpolation, greenDetectorInterpolation);
         float blueComponent = calcComponent(spectrumInterpolation, blueDetectorInterpolation);
 
-        rgbComponent.x = redComponent;
-        rgbComponent.y = greenComponent;
-        rgbComponent.z = blueComponent;
-
-        rgbComponent = rgbComponent / redComponent;
-    }
-
-    Ray getRay(int X, int Y) {
-        vec3 dir = lookat + right * (2.0f * (X + 0.5f) / windowWidth - 1) + up * (2.0f * (Y + 0.5f) / windowHeight - 1) - eye;
-        return Ray(eye, dir);
-    }
-
-    vec4 getRGBComponent() const {
+        vec4 rgbComponent(redComponent, greenComponent, blueComponent, 1);
+        //rgbComponent = rgbComponent / max(rgbComponent.x, max(rgbComponent.y, rgbComponent.z));
         return rgbComponent;
     }
 };
@@ -196,10 +192,18 @@ float rnd(int min, int max) {
     return (float) (rand() % (max + 1 - min) + min);
 }
 
+float max3(float a, float b, float c) {
+    if (a >= b && a >= c)
+        return a;
+    if (b >= a && b >= c)
+        return b;
+    return c;
+}
+
 class Scene {
     std::vector<Intersectable *> objects;
     Camera camera;
-    float globalMinDistance = -1.0;
+    float globalMaxVal = -1.0;
 public:
     void build() {
         float fov = 4 * M_PI / 180;
@@ -207,18 +211,18 @@ public:
             lookat = vec3(1 / tan(fov / 2), 0, 0);
         camera.set(eye, lookat, vup, fov);
 
-        //std::random_device rd; // obtain a random number from hardware
-        //std::mt19937 gen(rd()); // seed the generator
-        //std::uniform_int_distribution<> distrX(MIN_DISTANCE, MAX_DISTANCE); // define the range
-        //std::uniform_int_distribution<> distrY(MIN_YZ, MAX_YZ); // define the range
-        //std::uniform_int_distribution<> distrZ(MIN_YZ, MAX_YZ); // define the range
+        std::random_device rd; // obtain a random number from hardware
+        std::mt19937 gen(rd()); // seed the generator
+        std::uniform_int_distribution<> distrX(MIN_DISTANCE, MAX_DISTANCE); // define the range
+        std::uniform_int_distribution<> distrY(MIN_YZ, MAX_YZ); // define the range
+        std::uniform_int_distribution<> distrZ(MIN_YZ, MAX_YZ); // define the range
         for (int i = 0; i < NUM_STARS; i++) {
-            float x = rnd(MIN_DISTANCE, MAX_DISTANCE);
-            float y = rnd(MIN_YZ, MAX_YZ);
-            float z = rnd(MIN_YZ, MAX_YZ);
-            //float x = distrX(gen);
-            //float y = distrY(gen);
-            //float z = distrZ(gen);
+            //float x = rnd(MIN_DISTANCE, MAX_DISTANCE);
+            //float y = rnd(MIN_YZ, MAX_YZ);
+            //float z = rnd(MIN_YZ, MAX_YZ);
+            float x = distrX(gen);
+            float y = distrY(gen);
+            float z = distrZ(gen);
 
             Sphere* sphere = new Sphere(vec3(x, y, z),5e5);
             objects.push_back(sphere);
@@ -226,30 +230,33 @@ public:
     }
 
     void render(std::vector<vec4>& image) {
-        std::vector<float> distances(windowWidth * windowHeight);
-        float minDistance = MAX_DISTANCE + 1;
+        std::vector<vec4> tmpimage(windowWidth * windowHeight);
+        float maxVal = -1.0;
         for (int Y = 0; Y < windowHeight; Y++) {
 #pragma omp parallel for
             for (int X = 0; X < windowWidth; X++) {
-                float d = trace(camera.getRay(X, Y));
-                distances[Y * windowWidth + X] = d;
-                if (d != -1 && d < minDistance) {
-                    minDistance = d;
+                Hit hit = trace(camera.getRay(X, Y));
+                if (hit.t == -1) {
+                    tmpimage[Y * windowWidth + X] = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+                } else {
+                    vec4 rgb = camera.getRGB(hit.v) / (hit.d * hit.d);
+                    tmpimage[Y * windowWidth + X] = rgb;
+                    float maxComp = max3(rgb.x, rgb.y, rgb.z);
+                    if (hit.t != -1.0 && maxVal < maxComp) {
+                        maxVal = maxComp;
+                    }
                 }
             }
         }
 
-        if (globalMinDistance == -1)
-            globalMinDistance = minDistance;
-
+        if (globalMaxVal == -1.0)
+            globalMaxVal = maxVal;
 
         for (int Y = 0; Y < windowHeight; Y++) {
             for (int X = 0; X < windowWidth; X++) {
                 vec4 color;
-                if (globalMinDistance != (MAX_DISTANCE + 1) && distances[Y * windowWidth + X] != -1) {
-                    color = camera.getRGBComponent() * 5
-                            * (globalMinDistance / distances[Y * windowWidth + X]) *
-                            (globalMinDistance / distances[Y * windowWidth + X]);
+                if (globalMaxVal != -1.0 && tmpimage[Y * windowWidth + X].x != 0.0) {
+                    color = vec4(5 * tmpimage[Y * windowWidth + X] / globalMaxVal);
                     color.w = 1;
                 } else {
                     color = vec4(0, 0, 0, 1);
@@ -266,14 +273,14 @@ public:
             if (hit.t > 0 && (bestHit.t < 0 || hit.t < bestHit.t))
                 bestHit = hit;
         }
-        if (dot(ray.dir, bestHit.normal) > 0) bestHit.normal = bestHit.normal * (-1);
+        if (dot(ray.dir, bestHit.normal) > 0)
+            bestHit.normal = bestHit.normal * (-1);
         return bestHit;
     }
 
-    float trace(Ray ray) {
+    Hit trace(Ray ray) {
         Hit hit = firstIntersect(ray);
-        if (hit.t < 0) return -1;
-        return hit.distance;
+        return hit;
     }
 };
 
@@ -347,17 +354,16 @@ void onInitialization() {
     scene.build();
     scene.render(image);
 
-
     // create program for the GPU
     gpuProgram.create(vertexSource, fragmentSource, "fragmentColor");
 }
 
 // Window has become invalid: Redraw
 void onDisplay() {
-    //long timeStart = glutGet(GLUT_ELAPSED_TIME);
+    long timeStart = glutGet(GLUT_ELAPSED_TIME);
     scene.render(image);
-    //long timeEnd = glutGet(GLUT_ELAPSED_TIME);
-    //printf("Rendering time: %ld milliseconds\n", (timeEnd - timeStart));
+    long timeEnd = glutGet(GLUT_ELAPSED_TIME);
+    printf("Rendering time: %ld milliseconds\n", (timeEnd - timeStart));
 
     fullScreenTexturedQuad = new FullScreenTexturedQuad(windowWidth, windowHeight, image);
 
