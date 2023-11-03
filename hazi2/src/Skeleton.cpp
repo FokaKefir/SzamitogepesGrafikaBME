@@ -148,11 +148,13 @@ private:
         float step = (maxTime - minTime) / SPLIT_INTEGRAL;
 
         for (int i = 0; i < SPLIT_INTEGRAL; ++i) {
-            float l1 = (minTime + (float) i * step) * lambdaConst;
-            float l2 = (minTime + (float) (i + 1) * step) * lambdaConst;
+            float t1 = minTime + (float) i * step;
+            float t2 = minTime + (float) (i + 1) * step;
+            float l1 = (t1) * lambdaConst;
+            float l2 = (t2) * lambdaConst;
 
-            float val1 = sInterpol.interpolate(l1) * rgbInterpol.interpolate(l1);
-            float val2 = sInterpol.interpolate(l2) * rgbInterpol.interpolate(l2);
+            float val1 = sInterpol.interpolate(t1) * rgbInterpol.interpolate(l1);
+            float val2 = sInterpol.interpolate(t1) * rgbInterpol.interpolate(l2);
 
             sum += (val1 + val2) / 2.0f * (l2 - l1);
             sumLambda += (l2 - l1);
