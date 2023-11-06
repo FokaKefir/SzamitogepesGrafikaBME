@@ -21,8 +21,9 @@
 
 #define C 1079252827.2f // km/h
 
+#define HUBBLE 0.1f
+
 int tx = INIT_TIME;
-float hubble = 0.1;
 
 
 struct Hit {
@@ -43,18 +44,20 @@ public:
     virtual Hit intersect(const Ray& ray) = 0;
 };
 
-struct Sphere : public Intersectable {
+struct Star : public Intersectable {
     vec3 center;
     float radius;
 
-    Sphere(const vec3& _center, float _radius) {
+    Star(const vec3& _center, float _radius) {
         center = _center;
         radius = _radius;
     }
 
     Hit intersect(const Ray& ray) {
         Hit hit;
-        vec3 center = this->center * exp(hubble * (float)(tx - INIT_TIME)); // add Hubble's law
+
+        // Hubble torvenyt alkalmazzuk a csillagok tavolodasara
+        vec3 center = this->center * exp(HUBBLE * tx);
         vec3 dist = ray.start - center;
         float a = dot(ray.dir, ray.dir);
         float b = dot(dist, ray.dir) * 2.0f;
@@ -65,10 +68,15 @@ struct Sphere : public Intersectable {
         float t1 = (-b + sqrt_discr) / 2.0f / a;	// t1 >= t2 for sure
         float t2 = (-b - sqrt_discr) / 2.0f / a;
         if (t1 <= 0) return hit;
-        hit.t = (t2 > 0) ? t2 : t1;
+
+        // a kovetkezo egyenleg jott ki amint a newton es raphson formulat levezettem
+        float T = (t2 > 0) ? t2 : t1;
+        float d = length(ray.dir * hit.t);
+        float v = d * HUBBLE;
+        hit.t = T - (d / (v + C * 8766000000000.0f)); // fenysebesseg atalakitjuk km/h-bol km/milliardev-be
         hit.position = ray.start + ray.dir * hit.t;
         hit.d = length(ray.dir * hit.t);
-        hit.v = hit.d * hubble; // add velocity
+        hit.v = hit.d * HUBBLE; // add velocity
         hit.normal = (hit.position - center) * (1.0f / radius);
         return hit;
     }
@@ -140,8 +148,6 @@ private:
         float lambdaConst = (1 + v / C);
 
         float sum = 0.0f;
-        float sumLambda = 0.0f;
-
         float minTime = sInterpol.getMinTime();
         float maxTime = sInterpol.getMaxTime();
 
@@ -150,17 +156,16 @@ private:
         for (int i = 0; i < SPLIT_INTEGRAL; ++i) {
             float t1 = minTime + (float) i * step;
             float t2 = minTime + (float) (i + 1) * step;
-            float l1 = (t1) * lambdaConst;
-            float l2 = (t2) * lambdaConst;
+            float l1 = t1 * lambdaConst;
+            float l2 = t2 * lambdaConst;
 
             float val1 = sInterpol.interpolate(t1) * rgbInterpol.interpolate(l1);
             float val2 = sInterpol.interpolate(t1) * rgbInterpol.interpolate(l2);
 
-            sum += (val1 + val2) / 2.0f * (l2 - l1);
-            sumLambda += (l2 - l1);
+            sum += (val1 + val2) / 2.0f * (t2 - t1);
         }
 
-        return sum / sumLambda;
+        return sum / SPLIT_INTEGRAL;
     }
 
 public:
@@ -213,7 +218,7 @@ float max3(float a, float b, float c) {
 }
 
 class Scene {
-    std::vector<Intersectable *> objects;
+    std::vector<Star*> stars;
     Camera camera;
     float globalMaxVal = -1.0;
 public:
@@ -236,8 +241,8 @@ public:
             float y = distrY(gen);
             float z = distrZ(gen);
 
-            Sphere* sphere = new Sphere(vec3(x, y, z),5e5);
-            objects.push_back(sphere);
+            Star* star = new Star(vec3(x, y, z), 5e5);
+            stars.push_back(star);
         }
     }
 
@@ -280,7 +285,7 @@ public:
 
     Hit firstIntersect(Ray ray) {
         Hit bestHit;
-        for (Intersectable * object : objects) {
+        for (Intersectable * object : stars) {
             Hit hit = object->intersect(ray); //  hit.t < 0 if no intersection
             if (hit.t > 0 && (bestHit.t < 0 || hit.t < bestHit.t))
                 bestHit = hit;
@@ -337,8 +342,8 @@ public:
         glGenVertexArrays(1, &vao);	// create 1 vertex array object
         glBindVertexArray(vao);		// make it active
 
-        unsigned int vbo;		// vertex buffer objects
-        glGenBuffers(1, &vbo);	// Generate 1 vertex buffer objects
+        unsigned int vbo;		// vertex buffer stars
+        glGenBuffers(1, &vbo);	// Generate 1 vertex buffer stars
 
         // vertex coordinates: vbo0 -> Attrib Array 0 -> vertexPosition of the vertex shader
         glBindBuffer(GL_ARRAY_BUFFER, vbo); // make it active, it is an array
