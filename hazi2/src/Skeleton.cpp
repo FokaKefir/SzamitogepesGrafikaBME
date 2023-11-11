@@ -9,22 +9,24 @@
 #include <ctime>
 
 #define NUM_STARS 100
-#define SPLIT_INTEGRAL 100
+#define SPLIT_INTEGRAL 300
 
-#define MIN_DISTANCE 1000e5
-#define MAX_DISTANCE 6000e5
+// A konstansoknak normalizalt nem pedig valos ertekek vannak megadva
+// annak erdekeben hogy a float pontatlansagat elkeruljuk
+#define MIN_DISTANCE 500
+#define MAX_DISTANCE 1800
 
-#define MIN_YZ -70e5
-#define MAX_YZ 70e5
+#define MIN_YZ -25
+#define MAX_YZ 25
+
+#define RADIUS 3
+
+#define C 100
 
 #define INIT_TIME 1
-
-#define C 1079252827.2f // km/h
-
 #define HUBBLE 0.1f
 
 int tx = INIT_TIME;
-
 
 struct Hit {
     float t;
@@ -73,7 +75,7 @@ struct Star : public Intersectable {
         float T = (t2 > 0) ? t2 : t1;
         float d = length(ray.dir * hit.t);
         float v = d * HUBBLE;
-        hit.t = T - (d / (v + C * 8766000000000.0f)); // fenysebesseg atalakitjuk km/h-bol km/milliardev-be
+        hit.t = T - (d / (v + C));
         hit.position = ray.start + ray.dir * hit.t;
         hit.d = length(ray.dir * hit.t);
         hit.v = hit.d * HUBBLE; // add velocity
@@ -143,8 +145,6 @@ private:
 
 
     float calcComponentDoppler(HermiteInterpolation sInterpol, HermiteInterpolation rgbInterpol, float v) const {
-
-        v /= 8766000000000.0f; // km / h
         float lambdaConst = (1 + v / C);
 
         float sum = 0.0f;
@@ -206,7 +206,8 @@ public:
 };
 
 float rnd(int min, int max) {
-    return (float) (rand() % (max + 1 - min) + min);
+    return (float) ((rand() / RAND_MAX) * (max - min) + min);
+    //return (float) (rand() % (max + 1 - min) + min);
 }
 
 float max3(float a, float b, float c) {
@@ -241,7 +242,7 @@ public:
             float y = distrY(gen);
             float z = distrZ(gen);
 
-            Star* star = new Star(vec3(x, y, z), 5e5);
+            Star* star = new Star(vec3(x, y, z), RADIUS);
             stars.push_back(star);
         }
     }
@@ -256,7 +257,7 @@ public:
                 if (hit.t == -1) {
                     tmpimage[Y * windowWidth + X] = vec4(0.0f, 0.0f, 0.0f, 1.0f);
                 } else {
-                    vec4 rgb = camera.getRGB(hit.v) / (hit.d * hit.d);
+                    vec4 rgb = camera.getRGB(hit.v);
                     tmpimage[Y * windowWidth + X] = rgb;
                     float maxComp = max3(rgb.x, rgb.y, rgb.z);
                     if (hit.t != -1.0 && maxVal < maxComp) {
