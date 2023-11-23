@@ -1,0 +1,34 @@
+C:\Users\david\AppData\Local\Programs\CLion\bin\cmake\win\x64\bin\cmake.exe -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=C:/Users/david/AppData/Local/Programs/CLion/bin/ninja/win/x64/ninja.exe -DCMAKE_CXX_COMPILER=C:/MinGW/bin/g++.exe -G Ninja -S C:\Users\david\OneDrive\Documents\Egyetem\SzGrafika\SzamitogepesGrafikaBME\hazi3 -B C:\Users\david\OneDrive\Documents\Egyetem\SzGrafika\SzamitogepesGrafikaBME\hazi3\cmake-build-debug
+CMake Warning (dev) at C:/Users/david/AppData/Local/Programs/CLion/bin/cmake/win/x64/share/cmake-3.26/Modules/ExternalProject.cmake:3091 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  C:/Users/david/AppData/Local/Programs/CLion/bin/cmake/win/x64/share/cmake-3.26/Modules/ExternalProject.cmake:4208 (_ep_add_download_command)
+  CMakeLists.txt:52 (ExternalProject_Add)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at C:/Users/david/AppData/Local/Programs/CLion/bin/cmake/win/x64/share/cmake-3.26/Modules/ExternalProject.cmake:3091 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  C:/Users/david/AppData/Local/Programs/CLion/bin/cmake/win/x64/share/cmake-3.26/Modules/ExternalProject.cmake:4208 (_ep_add_download_command)
+  CMakeLists.txt:60 (ExternalProject_Add)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Configuring done (1.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug

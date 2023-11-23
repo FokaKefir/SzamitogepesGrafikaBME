@@ -1,0 +1,5 @@
+C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/CMakeFiles/program.dir
+C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/CMakeFiles/glut.dir
+C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/CMakeFiles/glew.dir
+C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/CMakeFiles/rebuild_cache.dir

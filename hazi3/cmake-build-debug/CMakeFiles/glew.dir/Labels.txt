@@ -1,0 +1,13 @@
+# Target labels
+ glew
+# Source files and their labels
+C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/CMakeFiles/glew
+C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/CMakeFiles/glew.rule
+C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/CMakeFiles/glew-complete.rule
+C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glew-prefix/src/glew-stamp/glew-build.rule
+C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glew-prefix/src/glew-stamp/glew-configure.rule
+C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glew-prefix/src/glew-stamp/glew-download.rule
+C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glew-prefix/src/glew-stamp/glew-install.rule
+C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glew-prefix/src/glew-stamp/glew-mkdir.rule
+C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glew-prefix/src/glew-stamp/glew-patch.rule
+C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glew-prefix/src/glew-stamp/glew-update.rule

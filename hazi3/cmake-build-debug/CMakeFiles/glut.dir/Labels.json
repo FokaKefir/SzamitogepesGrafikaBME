@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/CMakeFiles/glut"
+		},
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/CMakeFiles/glut.rule"
+		},
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/CMakeFiles/glut-complete.rule"
+		},
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glut-prefix/src/glut-stamp/glut-build.rule"
+		},
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glut-prefix/src/glut-stamp/glut-configure.rule"
+		},
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glut-prefix/src/glut-stamp/glut-download.rule"
+		},
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glut-prefix/src/glut-stamp/glut-install.rule"
+		},
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glut-prefix/src/glut-stamp/glut-mkdir.rule"
+		},
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glut-prefix/src/glut-stamp/glut-patch.rule"
+		},
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glut-prefix/src/glut-stamp/glut-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"glut"
+		],
+		"name" : "glut"
+	}
+}

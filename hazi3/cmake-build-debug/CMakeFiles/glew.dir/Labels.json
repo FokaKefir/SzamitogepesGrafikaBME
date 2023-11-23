@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/CMakeFiles/glew"
+		},
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/CMakeFiles/glew.rule"
+		},
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/CMakeFiles/glew-complete.rule"
+		},
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glew-prefix/src/glew-stamp/glew-build.rule"
+		},
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glew-prefix/src/glew-stamp/glew-configure.rule"
+		},
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glew-prefix/src/glew-stamp/glew-download.rule"
+		},
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glew-prefix/src/glew-stamp/glew-install.rule"
+		},
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glew-prefix/src/glew-stamp/glew-mkdir.rule"
+		},
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glew-prefix/src/glew-stamp/glew-patch.rule"
+		},
+		{
+			"file" : "C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/hazi3/cmake-build-debug/glew-prefix/src/glew-stamp/glew-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"glew"
+		],
+		"name" : "glew"
+	}
+}
