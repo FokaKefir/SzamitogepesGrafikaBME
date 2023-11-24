@@ -1,11 +1,5 @@
 //=============================================================================================
-// Computer Graphics Sample Program: 3D engine-let
-// Shader: Gouraud, Phong, NPR
-// Material: diffuse + Phong-Blinn
-// Texture: CPU-procedural
-// Geometry: sphere, tractricoid, torus, mobius, klein-bottle, boy, dini
-// Camera: perspective
-// Light: point or directional sources
+
 //=============================================================================================
 #include "framework.h"
 
@@ -169,14 +163,19 @@ public:
         glGenBuffers(1, &vbo); // Generate 1 vertex buffer object
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
     }
-    virtual void Draw() = 0;
     ~Geometry() {
         glDeleteBuffers(1, &vbo);
         glDeleteVertexArrays(1, &vao);
     }
+
+    virtual void Draw() = 0;
+
+    virtual void display() = 0;
+
 };
 
 class Pyramid :  public Geometry {
+    int size;
     struct VertexData {
         vec3 position, normal;
     };
@@ -197,8 +196,17 @@ class Pyramid :  public Geometry {
         vtxData.push_back(vtx3);
     }
 
+    void init() {
+        glBufferData(GL_ARRAY_BUFFER, size * sizeof(VertexData), &vtxData[0], GL_STATIC_DRAW);
+
+        glEnableVertexAttribArray(0);  // attribute array 0 = POSITION
+        glEnableVertexAttribArray(1);  // attribute array 1 = NORMAL
+        // attribute array, components/attribute, component type, normalize?, stride, offset
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void *) offsetof(VertexData, position));
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void *) offsetof(VertexData, normal));
+    }
 public:
-    Pyramid() {
+    Pyramid() : Geometry() {
         // pyramid vertices
         vec3 v1(0.0f, 0.0f, 0.0f);
         vec3 v2(1.0f, 0.0f, 0.0f);
@@ -220,23 +228,22 @@ public:
         add(v3, v4, v5, nside3);
         add(v4, v1, v5, nside4);
 
-        glBufferData(GL_ARRAY_BUFFER, vtxData.size() * 3 * sizeof(VertexData), &vtxData[0], GL_STATIC_DRAW);
-
-        glEnableVertexAttribArray(0);  // attribute array 0 = POSITION
-        glEnableVertexAttribArray(1);  // attribute array 1 = NORMAL
-        // attribute array, components/attribute, component type, normalize?, stride, offset
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void *) offsetof(VertexData, position));
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void *) offsetof(VertexData, normal));
-
+        size = vtxData.size();
+        init();
     }
 
     void Draw() {
         glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, vtxData.size() * 3);
+        glDrawArrays(GL_TRIANGLES, 0, size);
+    }
+
+    void display() {
+        printf("pyramid size: %d\n", vtxData.size());
     }
 };
 
 class Base : public Geometry {
+    int size;
     struct VertexData {
         vec3 position, normal;
     };
@@ -257,8 +264,17 @@ class Base : public Geometry {
         vtxData.push_back(vtx3);
     }
 
+    void init() {
+        glBufferData(GL_ARRAY_BUFFER, size * sizeof(VertexData), &vtxData[0], GL_STATIC_DRAW);
+
+        glEnableVertexAttribArray(0);  // attribute array 0 = POSITION
+        glEnableVertexAttribArray(1);  // attribute array 1 = NORMAL
+        // attribute array, components/attribute, component type, normalize?, stride, offset
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void *) offsetof(VertexData, position));
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void *) offsetof(VertexData, normal));
+    }
 public:
-    Base() {
+    Base() : Geometry() {
         // base vertices
         vec3 v1(-0.5f, 0.0f, -0.5f);
         vec3 v2(0.5f, 0.0f, -0.5f);
@@ -268,22 +284,84 @@ public:
         // base normals
         vec3 nbase(0.0, 1.0, 0.0);
 
-
         add(v1, v2, v3, nbase);
         add(v1, v4, v3, nbase);
 
-        glBufferData(GL_ARRAY_BUFFER, vtxData.size() * 3 * sizeof(VertexData), &vtxData[0], GL_STATIC_DRAW);
+        size = vtxData.size();
 
-        glEnableVertexAttribArray(0);  // attribute array 0 = POSITION
-        glEnableVertexAttribArray(1);  // attribute array 1 = NORMAL
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void *) offsetof(VertexData, position));
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void *) offsetof(VertexData, normal));
-
+        init();
     }
 
     void Draw() {
         glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, vtxData.size() * 3);
+        glDrawArrays(GL_TRIANGLES, 0, size);
+    }
+
+    void display() {
+
+    }
+};
+
+class TrackSegment : public Geometry {
+    int size;
+    struct VertexData {
+        vec3 position, normal;
+    };
+    std::vector<VertexData> vtxData;
+
+    void add(vec3 v1, vec3 v2, vec3 v3, vec3 normal) {
+        VertexData vtx1;
+        vtx1.position = v1;
+        vtx1.normal = normal;
+        VertexData vtx2;
+        vtx2.position = v2;
+        vtx2.normal = normal;
+        VertexData vtx3;
+        vtx3.position = v3;
+        vtx3.normal = normal;
+        vtxData.push_back(vtx1);
+        vtxData.push_back(vtx2);
+        vtxData.push_back(vtx3);
+    }
+
+    void init() {
+        glBufferData(GL_ARRAY_BUFFER, size * sizeof(VertexData), &vtxData[0], GL_STATIC_DRAW);
+
+        glEnableVertexAttribArray(0);  // attribute array 0 = POSITION
+        glEnableVertexAttribArray(1);  // attribute array 1 = NORMAL
+        // attribute array, components/attribute, component type, normalize?, stride, offset
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void *) offsetof(VertexData, position));
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void *) offsetof(VertexData, normal));
+    }
+public:
+    TrackSegment() : Geometry() {
+
+        vtxData =  std::vector<VertexData>();
+
+        // base vertices
+        vec3 v1(-0.5f, 0.0f, -0.5f);
+        vec3 v2(0.5f, 0.0f, -0.5f);
+        vec3 v3(0.5f, 0.0f, 0.5f);
+        vec3 v4(-0.5f, 0.0f, 0.5f);
+
+        // base normals
+        vec3 nbase(0.0, 1.0, 0.0);
+
+        add(v1, v2, v3, nbase);
+        add(v1, v4, v3, nbase);
+
+        size = vtxData.size();
+
+        init();
+    }
+
+    void Draw() {
+        glBindVertexArray(vao);
+        glDrawArrays(GL_TRIANGLES, 0,  size);
+    }
+
+    void display() {
+        printf("ts size: %d\n", vtxData.size());
     }
 };
 
@@ -319,7 +397,10 @@ public:
         geometry->Draw();
     }
 
-    virtual void Animate(float tstart, float tend) { rotationAngle = 0.8f * tend; }
+    virtual void Animate(float tstart, float tend) {
+        rotationAngle = 0.8f * tend;
+        geometry->display();
+    }
 };
 
 //---------------------------
@@ -350,8 +431,11 @@ public:
         materialBase->shininess = 0;
 
         // Geometries
-        Geometry * pyramid = new Pyramid();
-        Base *base = new Base();
+
+        Geometry *pyramid = new Pyramid();
+        Geometry *base = new Base();
+        Geometry *trackSegment1 = new TrackSegment();
+
 
         // TODO: Add custom objects
 
@@ -364,12 +448,17 @@ public:
 
         Object *baseObject = new Object(shader, materialBase, base);
         baseObject->translation = vec3(0, 0, 0);
-        baseObject->scale = vec3(100.0f, 100.0f, 100.0f);
+        baseObject->scale = vec3(10.0f, 10.0f, 10.0f);
         baseObject->rotationAxis = vec3(0, 1, 0);
         objects.push_back(baseObject);
 
+        Object *tsObject = new Object(shader, material0, trackSegment1);
+        tsObject->translation = vec3(0, 1, 0);
+        tsObject->scale = vec3(1.0f, 1.0f, 1.0f);
+        objects.push_back(tsObject);
+
         // Camera
-        camera.wEye = vec3(0, 2, 8);
+        camera.wEye = vec3(-8, 2, 0);
         camera.wLookat = vec3(0, 0, 0);
         camera.wVup = vec3(0, 1, 0);
 
