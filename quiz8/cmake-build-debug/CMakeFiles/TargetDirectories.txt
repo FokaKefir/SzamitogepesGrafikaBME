@@ -1,0 +1,3 @@
+C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/quiz8/cmake-build-debug/CMakeFiles/quiz8.dir
+C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/quiz8/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/david/OneDrive/Documents/Egyetem/SzGrafika/SzamitogepesGrafikaBME/quiz8/cmake-build-debug/CMakeFiles/rebuild_cache.dir
