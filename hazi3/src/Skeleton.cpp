@@ -3,6 +3,11 @@
 //=============================================================================================
 #include "framework.h"
 
+#define NUM_PYRAMIDS 50
+#define MAX_BASE_SIZE 100.0f
+
+float rnd() { return (float) rand() / RAND_MAX; }
+
 //---------------------------
 struct Camera { // 3D camera
 //---------------------------
@@ -12,7 +17,7 @@ public:
     Camera() {
         asp = (float)windowWidth / windowHeight;
         fov = 75.0f * (float)M_PI / 180.0f;
-        fp = 1; bp = 20;
+        fp = 1; bp = 500;
     }
     mat4 V() { // view matrix: translates the center to the origin
         vec3 w = normalize(wEye - wLookat);
@@ -156,25 +161,7 @@ class Geometry {
 //---------------------------
 protected:
     unsigned int vao, vbo;        // vertex array object
-public:
-    Geometry() {
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
-        glGenBuffers(1, &vbo); // Generate 1 vertex buffer object
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    }
-    ~Geometry() {
-        glDeleteBuffers(1, &vbo);
-        glDeleteVertexArrays(1, &vao);
-    }
 
-    virtual void Draw() = 0;
-
-    virtual void display() = 0;
-
-};
-
-class Pyramid :  public Geometry {
     int size;
     struct VertexData {
         vec3 position, normal;
@@ -206,7 +193,30 @@ class Pyramid :  public Geometry {
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void *) offsetof(VertexData, normal));
     }
 public:
+    Geometry() {
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+        glGenBuffers(1, &vbo); // Generate 1 vertex buffer object
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    }
+    ~Geometry() {
+        glDeleteBuffers(1, &vbo);
+        glDeleteVertexArrays(1, &vao);
+    }
+
+    void Draw() {
+        glBindVertexArray(vao);
+        glDrawArrays(GL_TRIANGLES, 0, size);
+    }
+
+};
+
+class Pyramid :  public Geometry {
+
+public:
     Pyramid() : Geometry() {
+        vtxData = std::vector<VertexData>();
+
         // pyramid vertices
         vec3 v1(0.0f, 0.0f, 0.0f);
         vec3 v2(1.0f, 0.0f, 0.0f);
@@ -231,50 +241,14 @@ public:
         size = vtxData.size();
         init();
     }
-
-    void Draw() {
-        glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, size);
-    }
-
-    void display() {
-        printf("pyramid size: %d\n", vtxData.size());
-    }
 };
 
 class Base : public Geometry {
-    int size;
-    struct VertexData {
-        vec3 position, normal;
-    };
-    std::vector<VertexData> vtxData;
-
-    void add(vec3 v1, vec3 v2, vec3 v3, vec3 normal) {
-        VertexData vtx1;
-        vtx1.position = v1;
-        vtx1.normal = normal;
-        VertexData vtx2;
-        vtx2.position = v2;
-        vtx2.normal = normal;
-        VertexData vtx3;
-        vtx3.position = v3;
-        vtx3.normal = normal;
-        vtxData.push_back(vtx1);
-        vtxData.push_back(vtx2);
-        vtxData.push_back(vtx3);
-    }
-
-    void init() {
-        glBufferData(GL_ARRAY_BUFFER, size * sizeof(VertexData), &vtxData[0], GL_STATIC_DRAW);
-
-        glEnableVertexAttribArray(0);  // attribute array 0 = POSITION
-        glEnableVertexAttribArray(1);  // attribute array 1 = NORMAL
-        // attribute array, components/attribute, component type, normalize?, stride, offset
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void *) offsetof(VertexData, position));
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void *) offsetof(VertexData, normal));
-    }
 public:
     Base() : Geometry() {
+
+        vtxData = std::vector<VertexData>();
+
         // base vertices
         vec3 v1(-0.5f, 0.0f, -0.5f);
         vec3 v2(0.5f, 0.0f, -0.5f);
@@ -291,58 +265,19 @@ public:
 
         init();
     }
-
-    void Draw() {
-        glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, size);
-    }
-
-    void display() {
-
-    }
 };
 
 class TrackSegment : public Geometry {
-    int size;
-    struct VertexData {
-        vec3 position, normal;
-    };
-    std::vector<VertexData> vtxData;
-
-    void add(vec3 v1, vec3 v2, vec3 v3, vec3 normal) {
-        VertexData vtx1;
-        vtx1.position = v1;
-        vtx1.normal = normal;
-        VertexData vtx2;
-        vtx2.position = v2;
-        vtx2.normal = normal;
-        VertexData vtx3;
-        vtx3.position = v3;
-        vtx3.normal = normal;
-        vtxData.push_back(vtx1);
-        vtxData.push_back(vtx2);
-        vtxData.push_back(vtx3);
-    }
-
-    void init() {
-        glBufferData(GL_ARRAY_BUFFER, size * sizeof(VertexData), &vtxData[0], GL_STATIC_DRAW);
-
-        glEnableVertexAttribArray(0);  // attribute array 0 = POSITION
-        glEnableVertexAttribArray(1);  // attribute array 1 = NORMAL
-        // attribute array, components/attribute, component type, normalize?, stride, offset
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void *) offsetof(VertexData, position));
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (void *) offsetof(VertexData, normal));
-    }
 public:
     TrackSegment() : Geometry() {
 
         vtxData =  std::vector<VertexData>();
 
         // base vertices
-        vec3 v1(-0.5f, 0.0f, -0.5f);
-        vec3 v2(0.5f, 0.0f, -0.5f);
-        vec3 v3(0.5f, 0.0f, 0.5f);
-        vec3 v4(-0.5f, 0.0f, 0.5f);
+        vec3 v1(-0.5f, 0.0f, -2.5f);
+        vec3 v2(0.5f, 0.0f, -2.5f);
+        vec3 v3(0.5f, 0.0f, 2.5f);
+        vec3 v4(-0.5f, 0.0f, 2.5f);
 
         // base normals
         vec3 nbase(0.0, 1.0, 0.0);
@@ -354,16 +289,9 @@ public:
 
         init();
     }
-
-    void Draw() {
-        glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0,  size);
-    }
-
-    void display() {
-        printf("ts size: %d\n", vtxData.size());
-    }
 };
+
+
 
 //---------------------------
 struct Object {
@@ -398,10 +326,87 @@ public:
     }
 
     virtual void Animate(float tstart, float tend) {
-        rotationAngle = 0.8f * tend;
-        geometry->display();
+
+    }
+
+    virtual void display() {
+
     }
 };
+
+struct TrackSegmentObject : public Object {
+    float R = 0.5f;
+    float l0;
+    float v = 0.6f;
+public:
+    TrackSegmentObject(Shader * _shader, Material * _material, Geometry * _geometry, float _l0) : Object(_shader, _material, _geometry) {
+        l0 = _l0;
+        rotationAxis = vec3(0, 0, 1);
+    }
+
+    void Animate(float tstart, float tend) {
+        float l = l0 + v * tend;
+        float dl = l - 3.0f * R;
+        float x = R * sin(dl / R);
+        float y = R * (1 - cos(dl / R));
+        float beta = dl / R;
+        //if (x >= 0) {
+        translation = vec3(x, y, 0.0f);
+        rotationAngle = beta;
+        //} else {
+        //    if (y > R / 2) {
+        //        translation = vec3(x, 2 * R, 0.0f);
+        //    } else {
+        //        translation = vec3(x, 0.0f, 0.0f);
+        //    }
+        //    rotationAngle = 0.0f;
+        //}
+    }
+};
+
+struct Tank : public Object {
+
+    vec3 p;
+    vec3 h;
+    float vl = 2.0f;
+    float vr = 2.0f;
+    float dv = 0.5f;
+    float w = 3.0f;
+    float alpha = 0.0f;
+public:
+    Tank(Shader *pShader, Material *pMaterial, Geometry *pGeometry) : Object(pShader, pMaterial, pGeometry) {}
+
+    void Animate(float tstart, float tend) {
+        float dt = tend - tstart;
+        float omega = (vr - vl) / w;
+        alpha += omega * dt;
+        h = vec3(cos(alpha), 0, -sin(alpha));
+        p = p + h * (vr + vl) / 2 * dt;
+        translation = p;
+        rotationAngle = alpha;
+    }
+
+    void increaseLeftVelocity() {
+        vl += dv;
+    }
+
+    void decreaseLeftVelocity() {
+        vl -= dv;
+    }
+
+    void increaseRightVelocity() {
+        vr += dv;
+    }
+
+    void decreaseRightVelocity() {
+        vr -= dv;
+    }
+
+    void display() {
+        printf("vl: %.2f vr: %.2f\n", vl, vr);
+    }
+};
+
 
 //---------------------------
 class Scene {
@@ -409,62 +414,78 @@ class Scene {
     std::vector<Object *> objects;
     Camera camera; // 3D camera
     std::vector<Light> lights;
+
+    Shader *shader;
+
+    void generateRandomPyramids() {
+        Material *materialPyramid = new Material;
+        materialPyramid->kd = vec3(0.7f, 0.7f, 0.7f);
+        materialPyramid->ks = vec3(0.2f, 0.2f, 0.2f);
+        materialPyramid->shininess = 3;
+
+        int k = 0;
+        while (k < NUM_PYRAMIDS) {
+            float x = 2.0f * MAX_BASE_SIZE * rnd() - MAX_BASE_SIZE;
+            float z = 2.0f * MAX_BASE_SIZE * rnd() - MAX_BASE_SIZE;
+
+            if (sqrtf(x * x + z * z) >= 15) {
+                Geometry *pyramid = new Pyramid();
+                Object *pyramidObject = new Object(shader, materialPyramid, pyramid);
+                pyramidObject->translation = vec3(x, -0.5f, z);
+                pyramidObject->scale = vec3(7.0f, 5.0f, 7.0f);
+                objects.push_back(pyramidObject);
+                k += 1;
+            }
+        }
+    }
+
 public:
+    Tank *tank;
+
     void Build() {
         // Shaders
-        Shader * shader = new CustomShader();
+        shader = new CustomShader();
 
         // Materials
         Material * material0 = new Material;
         material0->kd = vec3(0.6f, 0.4f, 0.2f);
-        material0->ks = vec3(0.2f, 0.2f, 0.2f);
+        material0->ks = vec3(0.0f, 0.0f, 0.0f);
         material0->shininess = 5;
-
-        Material *materialPyramid = new Material;
-        materialPyramid->kd = vec3(0.7f, 0.7f, 0.7f);
-        materialPyramid->ks = vec3(0.2f, 0.2f, 0.2f);
-        materialPyramid->shininess = 5;
 
         Material *materialBase = new Material;
         materialBase->kd = vec3(0.76f, 0.682f, 0.117f);
-        materialBase->ks = vec3(0.2f, 0.2f, 0.2f);
+        materialBase->ks = vec3(0.0f, 0.0f, 0.0f);
         materialBase->shininess = 0;
 
         // Geometries
-
-        Geometry *pyramid = new Pyramid();
+        Geometry *temp = new Pyramid();
         Geometry *base = new Base();
-        Geometry *trackSegment1 = new TrackSegment();
-
-
-        // TODO: Add custom objects
+        //Geometry *trackSegment1 = new TrackSegment();
 
         // Create objects by setting up their vertex data on the GPU
-        Object * pyramidObject = new Object(shader, materialPyramid, pyramid);
-        pyramidObject->translation = vec3(0, 0, 0);
-        pyramidObject->scale = vec3(2.0f, 5.0f, 2.0f);
-        pyramidObject->rotationAxis = vec3(0, 1, 0);
-        objects.push_back(pyramidObject);
 
         Object *baseObject = new Object(shader, materialBase, base);
         baseObject->translation = vec3(0, 0, 0);
-        baseObject->scale = vec3(10.0f, 10.0f, 10.0f);
-        baseObject->rotationAxis = vec3(0, 1, 0);
+        baseObject->scale = vec3(3 * MAX_BASE_SIZE, 1.0f, 3 * MAX_BASE_SIZE);
         objects.push_back(baseObject);
 
-        Object *tsObject = new Object(shader, material0, trackSegment1);
-        tsObject->translation = vec3(0, 1, 0);
-        tsObject->scale = vec3(1.0f, 1.0f, 1.0f);
-        objects.push_back(tsObject);
+        //Object *tsObject = new TrackSegmentObject(shader, material0, trackSegment1, 0.0f);
+        //tsObject->translation = vec3(0, 1, 0);
+        //tsObject->scale = vec3(0.5f, 0.5f, 0.5f);
+        //objects.push_back(tsObject);
+
+        generateRandomPyramids();
+
+        tank = new Tank(shader, material0, temp);
+        tank->rotationAxis = vec3(0, 1, 0);
+        objects.push_back(tank);
 
         // Camera
-        camera.wEye = vec3(-8, 2, 0);
-        camera.wLookat = vec3(0, 0, 0);
         camera.wVup = vec3(0, 1, 0);
 
         // Lights
         lights.resize(1);
-        lights[0].wLightPos = vec4(5, 5, 4, 0);    // ideal point -> directional light source
+        lights[0].wLightPos = vec4(-5, 5, -4, 0);    // ideal point -> directional light source
         lights[0].Le = vec3(2, 2, 2);
     }
 
@@ -478,7 +499,9 @@ public:
     }
 
     void Animate(float tstart, float tend) {
-        for (Object * obj : objects) obj->Animate(tstart, tend);
+        tank->Animate(tstart, tend);
+        camera.wEye = tank->p + vec3(-5 * tank->h.x, 1.5f, -5 * tank->h.z);
+        camera.wLookat = tank->p;
     }
 };
 
@@ -501,7 +524,29 @@ void onDisplay() {
 }
 
 // Key of ASCII code pressed
-void onKeyboard(unsigned char key, int pX, int pY) { }
+void onKeyboard(unsigned char key, int pX, int pY) {
+    switch (key) {
+        case 'o': // increase right velocity
+            scene.tank->increaseRightVelocity();
+            break;
+
+        case 'l': // decrease right velocity
+            scene.tank->decreaseRightVelocity();
+            break;
+
+        case 'q': // increase left velocity
+            scene.tank->increaseLeftVelocity();
+            break;
+
+        case 'a': // decrease left velocity
+            scene.tank->decreaseLeftVelocity();
+            break;
+
+        default:
+            return;
+    }
+    scene.tank->display();
+}
 
 // Key of ASCII code released
 void onKeyboardUp(unsigned char key, int pX, int pY) { }
