@@ -1,5 +1,6 @@
 //=============================================================================================
-
+// Neptun:  Q1CGY7
+// Nev:     Babos David
 //=============================================================================================
 #include "framework.h"
 
@@ -291,7 +292,48 @@ public:
     }
 };
 
+class Cube : public Geometry {
+    float a, b, c;
+public:
+    Cube(float _a = 1.0f, float _b = 1.0f, float _c = 1.0f) : a(_a), b(_b), c(_c) {
+        vtxData = std::vector<VertexData>();
 
+        // cube normals
+        vec3 n1(0.0f, 0.0f, -1.0f);
+        vec3 n2(1.0f, 0.0f, 0.0f);
+        vec3 n3(0.0f, 0.0f, 1.0f);
+        vec3 n4(-1.0f, 0.0f, 0.0f);
+        vec3 n5(0.0f, 1.0f, 0.0f);
+        vec3 n6(0.0f, -1.0f, 0.0f);
+
+        // cube vertices
+        vec3 v1(-a/2, c, -b/2);
+        vec3 v2(-a/2, 0.0f, -b/2);
+        vec3 v3(a/2, c, -b/2);
+        vec3 v4(a/2, 0.0f, -b/2);
+        vec3 v5(a/2, c, b/2);
+        vec3 v6(a/2, 0, b/2);
+        vec3 v7(-a/2, c, b/2);
+        vec3 v8(-a/2, 0, b/2);
+
+        add(v1, v2, v3, n1);
+        add(v2, v3, v4, n1);
+        add(v3, v4, v5, n2);
+        add(v4, v5, v6, n2);
+        add(v5, v6, v7, n3);
+        add(v6, v7, v8, n3);
+        add(v7, v8, v1, n4);
+        add(v8, v1, v2, n4);
+        add(v7, v1, v5, n5);
+        add(v1, v5, v3, n5);
+        add(v2, v8, v4, n6);
+        add(v8, v4, v6, n6);
+
+        size = vtxData.size();
+
+        init();
+    }
+};
 
 //---------------------------
 struct Object {
@@ -365,7 +407,6 @@ public:
 };
 
 struct Tank : public Object {
-
     vec3 p;
     vec3 h;
     float vl = 2.0f;
@@ -457,26 +498,27 @@ public:
         materialBase->ks = vec3(0.0f, 0.0f, 0.0f);
         materialBase->shininess = 0;
 
-        // Geometries
-        Geometry *temp = new Pyramid();
-        Geometry *base = new Base();
+
         //Geometry *trackSegment1 = new TrackSegment();
-
-        // Create objects by setting up their vertex data on the GPU
-
-        Object *baseObject = new Object(shader, materialBase, base);
-        baseObject->translation = vec3(0, 0, 0);
-        baseObject->scale = vec3(3 * MAX_BASE_SIZE, 1.0f, 3 * MAX_BASE_SIZE);
-        objects.push_back(baseObject);
-
         //Object *tsObject = new TrackSegmentObject(shader, material0, trackSegment1, 0.0f);
         //tsObject->translation = vec3(0, 1, 0);
         //tsObject->scale = vec3(0.5f, 0.5f, 0.5f);
         //objects.push_back(tsObject);
 
+        // Create base
+        Geometry *base = new Base();
+        Object *baseObject = new Object(shader, materialBase, base);
+        baseObject->translation = vec3(0, 0, 0);
+        baseObject->scale = vec3(3 * MAX_BASE_SIZE, 1.0f, 3 * MAX_BASE_SIZE);
+        objects.push_back(baseObject);
+
+        // Generate random terrain
         generateRandomPyramids();
 
-        tank = new Tank(shader, material0, temp);
+        // Create Tank
+        Geometry *tankGeo = new Cube(3.0f, 1.5f, 0.8f);
+        //Geometry *tankGeo = new Pyramid();
+        tank = new Tank(shader, material0, tankGeo);
         tank->rotationAxis = vec3(0, 1, 0);
         objects.push_back(tank);
 
