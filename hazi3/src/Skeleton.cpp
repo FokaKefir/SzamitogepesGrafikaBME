@@ -380,10 +380,15 @@ struct TrackSegmentObject : public Object {
     float l0;
     float v;
     float maxL;
+    float alpha;
+    float dr;
 public:
     vec3 shift;
 
-    TrackSegmentObject(Shader * _shader, Material * _material, Geometry * _geometry, float _l0, float _R, float _v) : Object(_shader, _material, _geometry) {
+    TrackSegmentObject(Shader * _shader, Material * _material, Geometry * _geometry,
+                       float _l0, float _R, float _v, float _dr)
+            : Object(_shader, _material, _geometry) {
+        dr = _dr;
         l0 = _l0;
         R = _R;
         v = _v;
@@ -398,19 +403,34 @@ public:
         float y = R * (1 - cos(dl / R));
         float beta = dl / R;
 
+        vec3 pos;
+
         if (-3 * R <= l && l < 3 * R) {
-            translation = vec3(l, 0.01f, 0.0f) + shift;
+            pos = vec3(l, 0.01f, 0.0f);
             rotationAngle = 0;
         } else if (3 * R <= l && l < 3 * R + M_PI * R) {
-            translation = vec3(x, y, 0.0f) + shift;
+            pos = vec3(x, y, 0.0f);
             rotationAngle = beta;
         } else if (3 * R + M_PI * R <= l && l <= 9 * R + M_PI * R) {
-            translation = vec3(6.0f * R + R * M_PI - l, 2 * R, 0.0f) + shift;
+            pos = vec3(6.0f * R + R * M_PI - l, 2 * R, 0.0f);
             rotationAngle = 0;
         } else {
-            translation = vec3(x - 6 * R, y, 0.0f) + shift;
+            pos = vec3(x - 6 * R, y, 0.0f);
             rotationAngle = beta;
         }
+        //translation = vec3(pos.x * cos(alpha), pos.y, pos.x * sin(alpha)) + shift;
+        translation = pos + shift;
+    }
+
+    void SetModelingTransform(mat4& M, mat4& Minv) {
+        M = ScaleMatrix(scale)
+                * RotationMatrix(rotationAngle, rotationAxis)
+                * RotationMatrix(alpha, vec3(0, 1, 0))
+                * TranslateMatrix(translation);
+        Minv = TranslateMatrix(-translation)
+                * RotationMatrix(-rotationAngle, rotationAxis)
+                * RotationMatrix(-alpha, vec3(0, 1, 0))
+                * ScaleMatrix(vec3(1 / scale.x, 1 / scale.y, 1 / scale.z));
     }
 };
 
@@ -420,15 +440,19 @@ private:
     float R = 0.4f;
     float v;
     std::vector<TrackSegmentObject*> trackSegments;
+
 public:
+
     vec3 shift;
-    TrackObject(Shader * _shader, Material * _material, float _v) : Object(_shader, _material, nullptr) {
+    float alpha;
+
+    TrackObject(Shader * _shader, Material * _material, float _v, float dr) : Object(_shader, _material, nullptr) {
         v = _v;
         float maxL = 12.0f * R + 2.0f * M_PI * R;
         float dl = maxL / numSegments;
         for (float l = 0.0f; l < maxL; l += dl) {
             Geometry *trackSegmentGeo = new TrackSegmentGeo();
-            TrackSegmentObject *trackSegment = new TrackSegmentObject(shader, material, trackSegmentGeo, l, R, v);
+            TrackSegmentObject *trackSegment = new TrackSegmentObject(shader, material, trackSegmentGeo, l, R, v, dr);
             trackSegment->translation = vec3(0, 1, 0);
             trackSegment->scale = vec3(0.12f, 1.0f, 0.1f);
             trackSegments.push_back(trackSegment);
@@ -444,6 +468,7 @@ public:
     void Animate(float tstart, float tend) {
         for (TrackSegmentObject *trackSegment : trackSegments) {
             trackSegment->shift = shift;
+            trackSegment->alpha = alpha;
             trackSegment->Animate(tstart, tend);
         }
     }
@@ -466,10 +491,11 @@ struct Tank : public Object {
 
     TrackObject *trackLeft;
     TrackObject *trackRight;
+
 public:
     Tank(Shader *pShader, Material *pMaterial) : Object(pShader, pMaterial, nullptr) {
-        trackLeft = new TrackObject(pShader, pMaterial, vl);
-        trackRight = new TrackObject(pShader, pMaterial, vr);
+        trackLeft = new TrackObject(pShader, pMaterial, vl, w / 2);
+        trackRight = new TrackObject(pShader, pMaterial, vr, w / 2);
     }
 
     void Animate(float tstart, float tend) {
@@ -479,8 +505,10 @@ public:
         h = vec3(cos(alpha), 0, -sin(alpha));
         p = p + h * (vr + vl) / 2 * dt;
         translation = p;
-        rotationAngle = alpha;
+        //rotationAngle = alpha;
 
+        trackLeft->alpha = alpha;
+        trackRight->alpha = alpha;
         trackLeft->shift = translation + vec3(0, 0, -w / 2);
         trackRight->shift = translation + vec3(0, 0, w / 2);
         trackLeft->Animate(tstart, tend);
