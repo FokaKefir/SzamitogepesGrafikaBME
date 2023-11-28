@@ -212,10 +212,10 @@ public:
 
 };
 
-class Pyramid :  public Geometry {
+class PyramidGeo : public Geometry {
 
 public:
-    Pyramid() : Geometry() {
+    PyramidGeo() : Geometry() {
         vtxData = std::vector<VertexData>();
 
         // pyramid vertices
@@ -244,9 +244,9 @@ public:
     }
 };
 
-class Base : public Geometry {
+class BaseGeo : public Geometry {
 public:
-    Base() : Geometry() {
+    BaseGeo() : Geometry() {
 
         vtxData = std::vector<VertexData>();
 
@@ -268,10 +268,9 @@ public:
     }
 };
 
-class TrackSegment : public Geometry {
+class TrackSegmentGeo : public Geometry {
 public:
-    TrackSegment() : Geometry() {
-
+    TrackSegmentGeo() : Geometry() {
         vtxData =  std::vector<VertexData>();
 
         // base vertices
@@ -356,7 +355,7 @@ public:
         Minv = TranslateMatrix(-translation) * RotationMatrix(-rotationAngle, rotationAxis) * ScaleMatrix(vec3(1 / scale.x, 1 / scale.y, 1 / scale.z));
     }
 
-    void Draw(RenderState state) {
+    virtual void Draw(RenderState state) {
         mat4 M, Minv;
         SetModelingTransform(M, Minv);
         state.M = M;
@@ -377,45 +376,101 @@ public:
 };
 
 struct TrackSegmentObject : public Object {
-    float R = 0.5f;
+    float R;
     float l0;
-    float v = 0.6f;
+    float v;
+    float maxL;
 public:
-    TrackSegmentObject(Shader * _shader, Material * _material, Geometry * _geometry, float _l0) : Object(_shader, _material, _geometry) {
+    vec3 shift;
+
+    TrackSegmentObject(Shader * _shader, Material * _material, Geometry * _geometry, float _l0, float _R, float _v) : Object(_shader, _material, _geometry) {
         l0 = _l0;
+        R = _R;
+        v = _v;
+        maxL = 12.0f * R + 2.0f * M_PI * R;
         rotationAxis = vec3(0, 0, 1);
     }
 
     void Animate(float tstart, float tend) {
-        float l = l0 + v * tend;
+        float l = l0 + v * tend - ((int)((l0 + v * tend) / maxL)) * maxL - 3 * R;
         float dl = l - 3.0f * R;
-        float x = R * sin(dl / R);
+        float x = R * sin(dl / R) + 3 * R;
         float y = R * (1 - cos(dl / R));
         float beta = dl / R;
-        //if (x >= 0) {
-        translation = vec3(x, y, 0.0f);
-        rotationAngle = beta;
-        //} else {
-        //    if (y > R / 2) {
-        //        translation = vec3(x, 2 * R, 0.0f);
-        //    } else {
-        //        translation = vec3(x, 0.0f, 0.0f);
-        //    }
-        //    rotationAngle = 0.0f;
-        //}
+
+        if (-3 * R <= l && l < 3 * R) {
+            translation = vec3(l, 0.01f, 0.0f) + shift;
+            rotationAngle = 0;
+        } else if (3 * R <= l && l < 3 * R + M_PI * R) {
+            translation = vec3(x, y, 0.0f) + shift;
+            rotationAngle = beta;
+        } else if (3 * R + M_PI * R <= l && l <= 9 * R + M_PI * R) {
+            translation = vec3(6.0f * R + R * M_PI - l, 2 * R, 0.0f) + shift;
+            rotationAngle = 0;
+        } else {
+            translation = vec3(x - 6 * R, y, 0.0f) + shift;
+            rotationAngle = beta;
+        }
+    }
+};
+
+struct TrackObject : public Object {
+private:
+    float numSegments = 26;
+    float R = 0.4f;
+    float v;
+    std::vector<TrackSegmentObject*> trackSegments;
+public:
+    vec3 shift;
+    TrackObject(Shader * _shader, Material * _material, float _v) : Object(_shader, _material, nullptr) {
+        v = _v;
+        float maxL = 12.0f * R + 2.0f * M_PI * R;
+        float dl = maxL / numSegments;
+        for (float l = 0.0f; l < maxL; l += dl) {
+            Geometry *trackSegmentGeo = new TrackSegmentGeo();
+            TrackSegmentObject *trackSegment = new TrackSegmentObject(shader, material, trackSegmentGeo, l, R, v);
+            trackSegment->translation = vec3(0, 1, 0);
+            trackSegment->scale = vec3(0.12f, 1.0f, 0.1f);
+            trackSegments.push_back(trackSegment);
+        }
+    }
+
+    void Draw(RenderState state) {
+        for (TrackSegmentObject *trackSegment : trackSegments) {
+            trackSegment->Draw(state);
+        }
+    }
+
+    void Animate(float tstart, float tend) {
+        for (TrackSegmentObject *trackSegment : trackSegments) {
+            trackSegment->shift = shift;
+            trackSegment->Animate(tstart, tend);
+        }
+    }
+
+    void setVelocity(float _v) {
+        for (TrackSegmentObject *trackSegment : trackSegments) {
+            trackSegment->v = _v;
+        }
     }
 };
 
 struct Tank : public Object {
     vec3 p;
     vec3 h;
-    float vl = 2.0f;
-    float vr = 2.0f;
+    float vl = 1.0f;
+    float vr = 1.0f;
     float dv = 0.5f;
-    float w = 3.0f;
+    float w = 2.0f;
     float alpha = 0.0f;
+
+    TrackObject *trackLeft;
+    TrackObject *trackRight;
 public:
-    Tank(Shader *pShader, Material *pMaterial, Geometry *pGeometry) : Object(pShader, pMaterial, pGeometry) {}
+    Tank(Shader *pShader, Material *pMaterial) : Object(pShader, pMaterial, nullptr) {
+        trackLeft = new TrackObject(pShader, pMaterial, vl);
+        trackRight = new TrackObject(pShader, pMaterial, vr);
+    }
 
     void Animate(float tstart, float tend) {
         float dt = tend - tstart;
@@ -425,22 +480,36 @@ public:
         p = p + h * (vr + vl) / 2 * dt;
         translation = p;
         rotationAngle = alpha;
+
+        trackLeft->shift = translation + vec3(0, 0, -w / 2);
+        trackRight->shift = translation + vec3(0, 0, w / 2);
+        trackLeft->Animate(tstart, tend);
+        trackRight->Animate(tstart, tend);
+    }
+
+    void Draw(RenderState state) {
+        trackLeft->Draw(state);
+        trackRight->Draw(state);
     }
 
     void increaseLeftVelocity() {
         vl += dv;
+        trackLeft->setVelocity(vl);
     }
 
     void decreaseLeftVelocity() {
         vl -= dv;
+        trackLeft->setVelocity(vl);
     }
 
     void increaseRightVelocity() {
         vr += dv;
+        trackRight->setVelocity(vr);
     }
 
     void decreaseRightVelocity() {
         vr -= dv;
+        trackRight->setVelocity(vr);
     }
 
     void display() {
@@ -470,7 +539,7 @@ class Scene {
             float z = 2.0f * MAX_BASE_SIZE * rnd() - MAX_BASE_SIZE;
 
             if (sqrtf(x * x + z * z) >= 15) {
-                Geometry *pyramid = new Pyramid();
+                Geometry *pyramid = new PyramidGeo();
                 Object *pyramidObject = new Object(shader, materialPyramid, pyramid);
                 pyramidObject->translation = vec3(x, -0.5f, z);
                 pyramidObject->scale = vec3(7.0f, 5.0f, 7.0f);
@@ -489,7 +558,7 @@ public:
 
         // Materials
         Material * material0 = new Material;
-        material0->kd = vec3(0.6f, 0.4f, 0.2f);
+        material0->kd = vec3(0.8f, 0.8f, 0.8f);
         material0->ks = vec3(0.0f, 0.0f, 0.0f);
         material0->shininess = 5;
 
@@ -498,15 +567,8 @@ public:
         materialBase->ks = vec3(0.0f, 0.0f, 0.0f);
         materialBase->shininess = 0;
 
-
-        //Geometry *trackSegment1 = new TrackSegment();
-        //Object *tsObject = new TrackSegmentObject(shader, material0, trackSegment1, 0.0f);
-        //tsObject->translation = vec3(0, 1, 0);
-        //tsObject->scale = vec3(0.5f, 0.5f, 0.5f);
-        //objects.push_back(tsObject);
-
         // Create base
-        Geometry *base = new Base();
+        Geometry *base = new BaseGeo();
         Object *baseObject = new Object(shader, materialBase, base);
         baseObject->translation = vec3(0, 0, 0);
         baseObject->scale = vec3(3 * MAX_BASE_SIZE, 1.0f, 3 * MAX_BASE_SIZE);
@@ -516,14 +578,15 @@ public:
         generateRandomPyramids();
 
         // Create Tank
-        Geometry *tankGeo = new Cube(3.0f, 1.5f, 0.8f);
-        //Geometry *tankGeo = new Pyramid();
-        tank = new Tank(shader, material0, tankGeo);
+        //Geometry *tankGeo = new Cube(3.0f, 1.5f, 0.8f);
+        tank = new Tank(shader, material0);
         tank->rotationAxis = vec3(0, 1, 0);
         objects.push_back(tank);
 
         // Camera
         camera.wVup = vec3(0, 1, 0);
+        //camera.wEye = vec3(0, 0.5, 5);
+        //camera.wLookat = vec3(0, 0.5, 0);
 
         // Lights
         lights.resize(1);
@@ -537,7 +600,8 @@ public:
         state.V = camera.V();
         state.P = camera.P();
         state.lights = lights;
-        for (Object * obj : objects) obj->Draw(state);
+        for (Object * obj : objects)
+            obj->Draw(state);
     }
 
     void Animate(float tstart, float tend) {
