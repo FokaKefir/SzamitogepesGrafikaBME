@@ -163,11 +163,12 @@ class Geometry {
 protected:
     unsigned int vao, vbo;        // vertex array object
 
-    int size;
     struct VertexData {
-        vec3 position, normal;
+        vec3 position;
+        vec3 normal;
     };
     std::vector<VertexData> vtxData;
+    int vtxSize;
 
     void add(vec3 v1, vec3 v2, vec3 v3, vec3 normal) {
         VertexData vtx1;
@@ -185,7 +186,7 @@ protected:
     }
 
     void init() {
-        glBufferData(GL_ARRAY_BUFFER, size * sizeof(VertexData), &vtxData[0], GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, vtxSize * sizeof(VertexData), &vtxData[0], GL_STATIC_DRAW);
 
         glEnableVertexAttribArray(0);  // attribute array 0 = POSITION
         glEnableVertexAttribArray(1);  // attribute array 1 = NORMAL
@@ -207,13 +208,12 @@ public:
 
     void Draw() {
         glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, size);
+        glDrawArrays(GL_TRIANGLES, 0, vtxSize);
     }
 
 };
 
 class PyramidGeo : public Geometry {
-
 public:
     PyramidGeo() : Geometry() {
         vtxData = std::vector<VertexData>();
@@ -239,7 +239,7 @@ public:
         add(v3, v4, v5, nside3);
         add(v4, v1, v5, nside4);
 
-        size = vtxData.size();
+        vtxSize = vtxData.size();
         init();
     }
 };
@@ -247,7 +247,6 @@ public:
 class BaseGeo : public Geometry {
 public:
     BaseGeo() : Geometry() {
-
         vtxData = std::vector<VertexData>();
 
         // base vertices
@@ -262,7 +261,7 @@ public:
         add(v1, v2, v3, nbase);
         add(v1, v4, v3, nbase);
 
-        size = vtxData.size();
+        vtxSize = vtxData.size();
 
         init();
     }
@@ -285,50 +284,7 @@ public:
         add(v1, v2, v3, nbase);
         add(v1, v4, v3, nbase);
 
-        size = vtxData.size();
-
-        init();
-    }
-};
-
-class Cube : public Geometry {
-    float a, b, c;
-public:
-    Cube(float _a = 1.0f, float _b = 1.0f, float _c = 1.0f) : a(_a), b(_b), c(_c) {
-        vtxData = std::vector<VertexData>();
-
-        // cube normals
-        vec3 n1(0.0f, 0.0f, -1.0f);
-        vec3 n2(1.0f, 0.0f, 0.0f);
-        vec3 n3(0.0f, 0.0f, 1.0f);
-        vec3 n4(-1.0f, 0.0f, 0.0f);
-        vec3 n5(0.0f, 1.0f, 0.0f);
-        vec3 n6(0.0f, -1.0f, 0.0f);
-
-        // cube vertices
-        vec3 v1(-a/2, c, -b/2);
-        vec3 v2(-a/2, 0.0f, -b/2);
-        vec3 v3(a/2, c, -b/2);
-        vec3 v4(a/2, 0.0f, -b/2);
-        vec3 v5(a/2, c, b/2);
-        vec3 v6(a/2, 0, b/2);
-        vec3 v7(-a/2, c, b/2);
-        vec3 v8(-a/2, 0, b/2);
-
-        add(v1, v2, v3, n1);
-        add(v2, v3, v4, n1);
-        add(v3, v4, v5, n2);
-        add(v4, v5, v6, n2);
-        add(v5, v6, v7, n3);
-        add(v6, v7, v8, n3);
-        add(v7, v8, v1, n4);
-        add(v8, v1, v2, n4);
-        add(v7, v1, v5, n5);
-        add(v1, v5, v3, n5);
-        add(v2, v8, v4, n6);
-        add(v8, v4, v6, n6);
-
-        size = vtxData.size();
+        vtxSize = vtxData.size();
 
         init();
     }
@@ -395,6 +351,7 @@ public:
     }
 
     void Animate(float tstart, float tend) {
+        // Periodikussag miatt van ra szukseg
         float l = l0 - v * tend + 1000 * maxL;
         l = l - ((int)(l / maxL)) * maxL - 3 * R;
 
@@ -477,7 +434,7 @@ public:
     }
 };
 
-struct Tank : public Object {
+struct TankObject : public Object {
     vec3 p;
     vec3 h;
     float vl = 1.0f;
@@ -490,7 +447,7 @@ struct Tank : public Object {
     TrackObject *trackRight;
 
 public:
-    Tank(Shader *pShader, Material *pMaterial) : Object(pShader, pMaterial, nullptr) {
+    TankObject(Shader *pShader, Material *pMaterial) : Object(pShader, pMaterial, nullptr) {
         trackLeft = new TrackObject(pShader, pMaterial, vl);
         trackRight = new TrackObject(pShader, pMaterial, vr);
     }
@@ -563,6 +520,7 @@ class Scene {
             float x = 2.0f * MAX_BASE_SIZE * rnd() - MAX_BASE_SIZE;
             float z = 2.0f * MAX_BASE_SIZE * rnd() - MAX_BASE_SIZE;
 
+            // ne keruljon piramis pont a kozeppontba
             if (sqrtf(x * x + z * z) >= 15) {
                 Geometry *pyramid = new PyramidGeo();
                 Object *pyramidObject = new Object(shader, materialPyramid, pyramid);
@@ -575,7 +533,7 @@ class Scene {
     }
 
 public:
-    Tank *tank;
+    TankObject *tank;
 
     void Build() {
         // Shaders
@@ -595,16 +553,14 @@ public:
         // Create base
         Geometry *base = new BaseGeo();
         Object *baseObject = new Object(shader, materialBase, base);
-        baseObject->translation = vec3(0, 0, 0);
         baseObject->scale = vec3(3 * MAX_BASE_SIZE, 1.0f, 3 * MAX_BASE_SIZE);
         objects.push_back(baseObject);
 
         // Generate random terrain
         generateRandomPyramids();
 
-        // Create Tank
-        //Geometry *tankGeo = new Cube(3.0f, 1.5f, 0.8f);
-        tank = new Tank(shader, material0);
+        // Create TankObject
+        tank = new TankObject(shader, material0);
         tank->rotationAxis = vec3(0, 1, 0);
         objects.push_back(tank);
 
