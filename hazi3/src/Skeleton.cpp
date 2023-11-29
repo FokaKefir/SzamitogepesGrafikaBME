@@ -376,19 +376,17 @@ public:
 };
 
 struct TrackSegmentObject : public Object {
+private:
     float R;
     float l0;
-    float v;
     float maxL;
-    float alpha;
-    float dr;
 public:
     vec3 shift;
+    float v;
 
     TrackSegmentObject(Shader * _shader, Material * _material, Geometry * _geometry,
-                       float _l0, float _R, float _v, float _dr)
+                       float _l0, float _R, float _v)
             : Object(_shader, _material, _geometry) {
-        dr = _dr;
         l0 = _l0;
         R = _R;
         v = _v;
@@ -441,19 +439,17 @@ private:
     float R = 0.4f;
     float v;
     std::vector<TrackSegmentObject*> trackSegments;
-
 public:
 
     vec3 shift;
-    float alpha;
 
-    TrackObject(Shader * _shader, Material * _material, float _v, float dr) : Object(_shader, _material, nullptr) {
+    TrackObject(Shader * _shader, Material * _material, float _v) : Object(_shader, _material, nullptr) {
         v = _v;
         float maxL = 12.0f * R + 2.0f * M_PI * R;
         float dl = maxL / numSegments;
         for (float l = 0.0f; l < maxL; l += dl) {
             Geometry *trackSegmentGeo = new TrackSegmentGeo();
-            TrackSegmentObject *trackSegment = new TrackSegmentObject(shader, material, trackSegmentGeo, l, R, v, dr);
+            TrackSegmentObject *trackSegment = new TrackSegmentObject(shader, material, trackSegmentGeo, l, R, v);
             trackSegment->translation = vec3(0, 1, 0);
             trackSegment->scale = vec3(0.12f, 1.0f, 1.0f);
             trackSegments.push_back(trackSegment);
@@ -470,7 +466,6 @@ public:
     void Animate(float tstart, float tend) {
         for (TrackSegmentObject *trackSegment : trackSegments) {
             trackSegment->shift = shift;
-            trackSegment->alpha = alpha;
             trackSegment->Animate(tstart, tend);
         }
     }
@@ -496,8 +491,8 @@ struct Tank : public Object {
 
 public:
     Tank(Shader *pShader, Material *pMaterial) : Object(pShader, pMaterial, nullptr) {
-        trackLeft = new TrackObject(pShader, pMaterial, vl, w / 2);
-        trackRight = new TrackObject(pShader, pMaterial, vr, w / 2);
+        trackLeft = new TrackObject(pShader, pMaterial, vl);
+        trackRight = new TrackObject(pShader, pMaterial, vr);
     }
 
     void Animate(float tstart, float tend) {
@@ -509,8 +504,6 @@ public:
         translation = p;
         rotationAngle = alpha;
 
-        trackLeft->alpha = alpha;
-        trackRight->alpha = alpha;
         trackLeft->shift = vec3(0, 0, -w / 2);
         trackRight->shift = vec3(0, 0, w / 2);
         trackLeft->Animate(tstart, tend);
@@ -518,7 +511,6 @@ public:
     }
 
     void Draw(RenderState state) {
-        //rotationAngle = alpha;
         mat4 M0, Minv0;
         SetModelingTransform(M0, Minv0);
         trackLeft->Draw(state, M0, Minv0);
@@ -618,8 +610,6 @@ public:
 
         // Camera
         camera.wVup = vec3(0, 1, 0);
-        //camera.wEye = vec3(0, 0.5, 5);
-        //camera.wLookat = vec3(0, 0.5, 0);
 
         // Lights
         lights.resize(1);
@@ -639,13 +629,6 @@ public:
 
     void Animate(float tstart, float tend) {
         tank->Animate(tstart, tend);
-        mat4 M0, Minv0;
-        tank->SetModelingTransform(M0, Minv0);
-        vec4 wEye = vec4(1, 2, 2, 1) * M0;
-        vec4 wLookat = vec4(0, 0.5, 0, 1) * M0;
-
-        //camera.wEye = vec3(wEye.x, wEye.y, wEye.z);
-        //camera.wLookat = vec3(wLookat.x, wLookat.y, wLookat.z);
         camera.wEye = tank->p + vec3(-5 * tank->h.x, 1.5f, -5 * tank->h.z);
         camera.wLookat = tank->p;
     }
