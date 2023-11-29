@@ -274,10 +274,10 @@ public:
         vtxData =  std::vector<VertexData>();
 
         // base vertices
-        vec3 v1(-0.5f, 0.0f, -2.5f);
-        vec3 v2(0.5f, 0.0f, -2.5f);
-        vec3 v3(0.5f, 0.0f, 2.5f);
-        vec3 v4(-0.5f, 0.0f, 2.5f);
+        vec3 v1(-0.5f, 0.0f, -0.25f);
+        vec3 v2(0.5f, 0.0f, -0.25f);
+        vec3 v3(0.5f, 0.0f, 0.25f);
+        vec3 v4(-0.5f, 0.0f, 0.25f);
 
         // base normals
         vec3 nbase(0.0, 1.0, 0.0);
@@ -397,7 +397,9 @@ public:
     }
 
     void Animate(float tstart, float tend) {
-        float l = l0 + v * tend - ((int)((l0 + v * tend) / maxL)) * maxL - 3 * R;
+        float l = l0 - v * tend + 1000 * maxL;
+        l = l - ((int)(l / maxL)) * maxL - 3 * R;
+
         float dl = l - 3.0f * R;
         float x = R * sin(dl / R) + 3 * R;
         float y = R * (1 - cos(dl / R));
@@ -418,19 +420,18 @@ public:
             pos = vec3(x - 6 * R, y, 0.0f);
             rotationAngle = beta;
         }
-        //translation = vec3(pos.x * cos(alpha), pos.y, pos.x * sin(alpha)) + shift;
         translation = pos + shift;
     }
 
-    void SetModelingTransform(mat4& M, mat4& Minv) {
-        M = ScaleMatrix(scale)
-                * RotationMatrix(rotationAngle, rotationAxis)
-                * RotationMatrix(alpha, vec3(0, 1, 0))
-                * TranslateMatrix(translation);
-        Minv = TranslateMatrix(-translation)
-                * RotationMatrix(-rotationAngle, rotationAxis)
-                * RotationMatrix(-alpha, vec3(0, 1, 0))
-                * ScaleMatrix(vec3(1 / scale.x, 1 / scale.y, 1 / scale.z));
+    void Draw(RenderState state, mat4 M0, mat4 Minv0) {
+        mat4 M, Minv;
+        SetModelingTransform(M, Minv);
+        state.M = M * M0;
+        state.Minv = Minv0 * Minv;
+        state.MVP = state.M * state.V * state.P;
+        state.material = material;
+        shader->Bind(state);
+        geometry->Draw();
     }
 };
 
@@ -454,14 +455,15 @@ public:
             Geometry *trackSegmentGeo = new TrackSegmentGeo();
             TrackSegmentObject *trackSegment = new TrackSegmentObject(shader, material, trackSegmentGeo, l, R, v, dr);
             trackSegment->translation = vec3(0, 1, 0);
-            trackSegment->scale = vec3(0.12f, 1.0f, 0.1f);
+            trackSegment->scale = vec3(0.12f, 1.0f, 1.0f);
             trackSegments.push_back(trackSegment);
         }
+        rotationAxis = vec3(0, 1, 0);
     }
 
-    void Draw(RenderState state) {
+    void Draw(RenderState state, mat4 M0, mat4 Minv0) {
         for (TrackSegmentObject *trackSegment : trackSegments) {
-            trackSegment->Draw(state);
+            trackSegment->Draw(state, M0, Minv0);
         }
     }
 
@@ -505,19 +507,22 @@ public:
         h = vec3(cos(alpha), 0, -sin(alpha));
         p = p + h * (vr + vl) / 2 * dt;
         translation = p;
-        //rotationAngle = alpha;
+        rotationAngle = alpha;
 
         trackLeft->alpha = alpha;
         trackRight->alpha = alpha;
-        trackLeft->shift = translation + vec3(0, 0, -w / 2);
-        trackRight->shift = translation + vec3(0, 0, w / 2);
+        trackLeft->shift = vec3(0, 0, -w / 2);
+        trackRight->shift = vec3(0, 0, w / 2);
         trackLeft->Animate(tstart, tend);
         trackRight->Animate(tstart, tend);
     }
 
     void Draw(RenderState state) {
-        trackLeft->Draw(state);
-        trackRight->Draw(state);
+        //rotationAngle = alpha;
+        mat4 M0, Minv0;
+        SetModelingTransform(M0, Minv0);
+        trackLeft->Draw(state, M0, Minv0);
+        trackRight->Draw(state, M0, Minv0);
     }
 
     void increaseLeftVelocity() {
@@ -634,6 +639,13 @@ public:
 
     void Animate(float tstart, float tend) {
         tank->Animate(tstart, tend);
+        mat4 M0, Minv0;
+        tank->SetModelingTransform(M0, Minv0);
+        vec4 wEye = vec4(1, 2, 2, 1) * M0;
+        vec4 wLookat = vec4(0, 0.5, 0, 1) * M0;
+
+        //camera.wEye = vec3(wEye.x, wEye.y, wEye.z);
+        //camera.wLookat = vec3(wLookat.x, wLookat.y, wLookat.z);
         camera.wEye = tank->p + vec3(-5 * tank->h.x, 1.5f, -5 * tank->h.z);
         camera.wLookat = tank->p;
     }
