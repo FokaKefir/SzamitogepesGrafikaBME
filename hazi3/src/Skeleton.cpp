@@ -335,6 +335,7 @@ struct TrackSegmentObject : public Object {
 private:
     float R;
     float l0;
+    float L;
     float maxL;
 public:
     vec3 shift;
@@ -344,6 +345,7 @@ public:
                        float _l0, float _R, float _v)
             : Object(_shader, _material, _geometry) {
         l0 = _l0;
+        L = _l0;
         R = _R;
         v = _v;
         maxL = 12.0f * R + 2.0f * M_PI * R;
@@ -351,10 +353,14 @@ public:
     }
 
     void Animate(float tstart, float tend) {
-        // Periodikussag miatt van ra szukseg
-        float l = l0 - v * tend + 1000 * maxL;
-        l = l - ((int)(l / maxL)) * maxL - 3 * R;
+        this->L += -v * (tend - tstart);
+        if (this->L < 0) {
+            this->L += maxL;
+        } else if (L >= maxL) {
+            this->L -= maxL;
+        }
 
+        float l = this->L - 3 * R;
         float dl = l - 3.0f * R;
         float x = R * sin(dl / R) + 3 * R;
         float y = R * (1 - cos(dl / R));
