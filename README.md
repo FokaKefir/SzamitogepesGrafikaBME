@@ -14,3 +14,12 @@ Vizualizáljon egy táguló univerzumot az [1, 20] millárd év időintervallumb
 [Házi 2](https://github.com/FokaKefir/SzamitogepesGrafikaBME/tree/main/hazi2)
 
 ![](hazi2/univerzum.gif)
+
+
+# Harmadik házi feladat: Táncoló lánctalpak
+
+A program egy tank két lánctalpát jeleníti meg, amelyeket két botkormánnyal (jobb: o/l, bal: q/a) lehet gyorsítani, illetve lassítani. A két lánctalp összetartozik, még ha a közöttük lévő tankot nem is kötelező megjeleníteni. A tank és a talpak a szokásos módon haladnak és fordulnak a talajon.  A talaj sík amelyen tetszőlegesen választott tereptárgyak állnak. Egy-egy lánctalp szemekből áll, amelyek egymástól állandó távolságot tartva mozognak.
+
+[Házi 3](https://github.com/FokaKefir/SzamitogepesGrafikaBME/tree/main/hazi3)
+
+![](hazi3/tank.gif)
